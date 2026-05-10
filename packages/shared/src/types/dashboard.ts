@@ -6,6 +6,42 @@ export interface DashboardRunActivityDay {
   total: number;
 }
 
+export interface DashboardOutcomeArea {
+  billingCode: string;
+  open: number;
+  inProgress: number;
+  blocked: number;
+  done: number;
+  cancelled: number;
+  total: number;
+}
+
+export interface DashboardWorkerRoute {
+  route: string;
+  adapterType: string;
+  model: string;
+  requestedModelProfile: string | null;
+  appliedModelProfile: string | null;
+  fallbackCount: number;
+  succeeded: number;
+  failed: number;
+  cancelled: number;
+  other: number;
+  total: number;
+  costUsd: number;
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  successRatePercent: number;
+}
+
+export interface DashboardMeasurement {
+  outcomeAreas: DashboardOutcomeArea[];
+  workerRoutes: DashboardWorkerRoute[];
+  routeWindowDays: number;
+  routeRunLimit: number;
+}
+
 export interface DashboardSummary {
   companyId: string;
   agents: {
@@ -33,4 +69,5 @@ export interface DashboardSummary {
     pausedProjects: number;
   };
   runActivity: DashboardRunActivityDay[];
+  measurement?: DashboardMeasurement;
 }

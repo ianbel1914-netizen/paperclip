@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { dashboardApi } from "../api/dashboard";
 import { activityApi } from "../api/activity";
 import { accessApi } from "../api/access";
+import { costsApi } from "../api/costs";
 import { issuesApi } from "../api/issues";
 import { agentsApi } from "../api/agents";
 import { projectsApi } from "../api/projects";
@@ -20,11 +21,13 @@ import { ActivityRow } from "../components/ActivityRow";
 import { Identity } from "../components/Identity";
 import { timeAgo } from "../lib/timeAgo";
 import { cn, formatCents } from "../lib/utils";
-import { Bot, CircleDot, DollarSign, ShieldCheck, LayoutDashboard, PauseCircle } from "lucide-react";
+import { Bot, CircleDot, DollarSign, ShieldCheck, LayoutDashboard, PauseCircle, Route, Target } from "lucide-react";
 import { ActiveAgentsPanel } from "../components/ActiveAgentsPanel";
 import { ChartCard, RunActivityChart, PriorityChart, IssueStatusChart, SuccessRateChart } from "../components/ActivityCharts";
 import { PageSkeleton } from "../components/PageSkeleton";
-import type { Agent, Issue } from "@paperclipai/shared";
+import { ClaudeSubscriptionPanel } from "../components/ClaudeSubscriptionPanel";
+import { CodexSubscriptionPanel } from "../components/CodexSubscriptionPanel";
+import type { Agent, DashboardOutcomeArea, DashboardWorkerRoute, Issue, ProviderQuotaResult, QuotaWindow } from "@paperclipai/shared";
 import { PluginSlotOutlet } from "@/plugins/slots";
 
 const DASHBOARD_ACTIVITY_LIMIT = 10;
@@ -32,6 +35,280 @@ const DASHBOARD_ACTIVITY_LIMIT = 10;
 function getRecentIssues(issues: Issue[]): Issue[] {
   return [...issues]
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+}
+
+function formatOutcomeLabel(billingCode: string): string {
+  if (billingCode === "uncategorized") return "Uncategorized";
+  return billingCode
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatUsd(value: number): string {
+  return value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: value >= 10 ? 2 : 4,
+    maximumFractionDigits: value >= 10 ? 2 : 4,
+  });
+}
+
+function formatCompactNumber(value: number): string {
+  return value.toLocaleString("en-US", { notation: "compact", maximumFractionDigits: 1 });
+}
+
+function totalRouteCostUsd(routes: DashboardWorkerRoute[]): number {
+  return routes.reduce((sum, route) => sum + route.costUsd, 0);
+}
+
+function providerLabel(provider: string): string {
+  if (provider === "anthropic") return "Claude";
+  if (provider === "openai") return "Codex";
+  return provider;
+}
+
+function highestUsedPercent(windows: QuotaWindow[]): number | null {
+  const values = windows
+    .map((window) => window.usedPercent)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  return values.length > 0 ? Math.max(...values) : null;
+}
+
+function quotaTone(result: ProviderQuotaResult | null): "ok" | "warn" | "danger" | "unknown" {
+  if (!result || !result.ok) return "unknown";
+  const maxUsed = highestUsedPercent(result.windows);
+  if (maxUsed == null) return "unknown";
+  if (maxUsed >= 90) return "danger";
+  if (maxUsed >= 70) return "warn";
+  return "ok";
+}
+
+function quotaToneClass(tone: "ok" | "warn" | "danger" | "unknown"): string {
+  switch (tone) {
+    case "danger":
+      return "bg-red-400";
+    case "warn":
+      return "bg-amber-400";
+    case "ok":
+      return "bg-emerald-500";
+    default:
+      return "bg-muted-foreground/40";
+  }
+}
+
+function quotaSummary(result: ProviderQuotaResult | null): string {
+  if (!result) return "Not reported";
+  if (!result.ok) return result.error ?? "Quota unavailable";
+  const maxUsed = highestUsedPercent(result.windows);
+  if (maxUsed == null) return result.windows.length > 0 ? "Limits reported" : "No windows reported";
+  return `${maxUsed}% max used`;
+}
+
+function QuotaHealthPanel({
+  quotaData,
+  quotaLoading,
+  quotaError,
+}: {
+  quotaData?: ProviderQuotaResult[];
+  quotaLoading: boolean;
+  quotaError: unknown;
+}) {
+  const anthropic = quotaData?.find((result) => result.provider === "anthropic") ?? null;
+  const openai = quotaData?.find((result) => result.provider === "openai") ?? null;
+  const providers = [anthropic, openai].filter((result): result is ProviderQuotaResult => result != null);
+  const fetchError = quotaError instanceof Error ? quotaError.message : null;
+
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Quota Watch</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Live Claude and Codex subscription windows. Treat missing data as an operational risk.
+          </p>
+        </div>
+        <Link to="/costs" className="text-xs font-medium text-muted-foreground underline underline-offset-2">
+          Provider detail
+        </Link>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <div className="border border-border px-4 py-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(["anthropic", "openai"] as const).map((provider) => {
+              const result = provider === "anthropic" ? anthropic : openai;
+              const tone = quotaTone(result);
+              return (
+                <div key={provider} className="border border-border px-3.5 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium">{providerLabel(provider)}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {quotaLoading ? "Checking quota..." : quotaSummary(result)}
+                      </div>
+                    </div>
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${quotaToneClass(tone)}`} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {fetchError ? (
+            <div className="mt-3 border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {fetchError}
+            </div>
+          ) : null}
+          {!quotaLoading && !fetchError && providers.length === 0 ? (
+            <div className="mt-3 border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+              No quota provider returned data. Do not resume heavy autonomous work until Claude and Codex quota checks are visible.
+            </div>
+          ) : null}
+        </div>
+
+        <div className="grid gap-4">
+          {anthropic ? (
+            <ClaudeSubscriptionPanel
+              windows={anthropic.ok ? anthropic.windows : []}
+              source={anthropic.source}
+              error={anthropic.ok ? null : anthropic.error ?? "Claude quota unavailable"}
+            />
+          ) : null}
+          {openai ? (
+            <CodexSubscriptionPanel
+              windows={openai.ok ? openai.windows : []}
+              source={openai.source}
+              error={openai.ok ? null : openai.error ?? "Codex quota unavailable"}
+            />
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function OutcomeAreaRow({ area }: { area: DashboardOutcomeArea }) {
+  const activeCount = area.open;
+  const donePercent = area.total > 0 ? Math.round((area.done / area.total) * 100) : 0;
+  return (
+    <div className="grid gap-3 border-t border-border px-4 py-3 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-sm font-medium">{formatOutcomeLabel(area.billingCode)}</span>
+          <span className="shrink-0 rounded-sm border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+            {area.billingCode}
+          </span>
+        </div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          {activeCount} active · {area.blocked} blocked · {area.done} done
+        </div>
+      </div>
+      <div className="flex items-center gap-3 sm:justify-end">
+        <div className="h-2 w-28 overflow-hidden rounded-full bg-muted">
+          <div className="h-full bg-emerald-500" style={{ width: `${donePercent}%` }} />
+        </div>
+        <div className="w-12 text-right text-xs tabular-nums text-muted-foreground">{donePercent}%</div>
+      </div>
+    </div>
+  );
+}
+
+function WorkerRouteRow({ route }: { route: DashboardWorkerRoute }) {
+  const profile = route.requestedModelProfile ?? "none";
+  const totalTokens = route.inputTokens + route.cachedInputTokens + route.outputTokens;
+  return (
+    <div className="grid gap-3 border-t border-border px-4 py-3 first:border-t-0 lg:grid-cols-[minmax(0,1fr)_repeat(4,auto)] lg:items-center">
+      <div className="min-w-0">
+        <div className="truncate text-sm font-medium">{route.model}</div>
+        <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <span>{route.adapterType}</span>
+          <span>profile {profile}</span>
+          {route.fallbackCount > 0 ? <span className="text-amber-500">{route.fallbackCount} fallback blocks</span> : null}
+        </div>
+      </div>
+      <div className="text-xs tabular-nums text-muted-foreground lg:w-20 lg:text-right">{route.total} runs</div>
+      <div className="text-xs tabular-nums text-muted-foreground lg:w-20 lg:text-right">{route.successRatePercent}% win</div>
+      <div className="text-xs tabular-nums text-muted-foreground lg:w-20 lg:text-right">{formatUsd(route.costUsd)}</div>
+      <div className="text-xs tabular-nums text-muted-foreground lg:w-20 lg:text-right">{formatCompactNumber(totalTokens)} tok</div>
+    </div>
+  );
+}
+
+function OutcomeMeasurementPanel({
+  outcomeAreas,
+  workerRoutes,
+  routeWindowDays,
+}: {
+  outcomeAreas: DashboardOutcomeArea[];
+  workerRoutes: DashboardWorkerRoute[];
+  routeWindowDays: number;
+}) {
+  const visibleAreas = outcomeAreas.slice(0, 6);
+  const visibleRoutes = workerRoutes.slice(0, 5);
+  const openOutcomes = outcomeAreas.reduce((sum, area) => sum + area.open, 0);
+  const blockedOutcomes = outcomeAreas.reduce((sum, area) => sum + area.blocked, 0);
+  const routeCostUsd = totalRouteCostUsd(workerRoutes);
+
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Outcome Measurement</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Work grouped by business outcome and worker route, so cost can be judged against progress.
+          </p>
+        </div>
+        <Link to="/costs" className="text-xs font-medium text-muted-foreground underline underline-offset-2">
+          Cost detail
+        </Link>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <div className="border border-border">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-medium">Outcome Areas</h3>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {openOutcomes} open · {blockedOutcomes} blocked
+            </div>
+          </div>
+          {visibleAreas.length > 0 ? (
+            <div>
+              {visibleAreas.map((area) => (
+                <OutcomeAreaRow key={area.billingCode} area={area} />
+              ))}
+            </div>
+          ) : (
+            <p className="px-4 py-5 text-sm text-muted-foreground">No outcome areas yet.</p>
+          )}
+        </div>
+
+        <div className="border border-border">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Route className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-medium">Worker Routes</h3>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {formatUsd(routeCostUsd)} · {routeWindowDays}d
+            </div>
+          </div>
+          {visibleRoutes.length > 0 ? (
+            <div>
+              {visibleRoutes.map((route) => (
+                <WorkerRouteRow key={route.route} route={route} />
+              ))}
+            </div>
+          ) : (
+            <p className="px-4 py-5 text-sm text-muted-foreground">No worker route history yet.</p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export function Dashboard() {
@@ -81,6 +358,14 @@ export function Dashboard() {
     queryKey: queryKeys.access.companyUserDirectory(selectedCompanyId!),
     queryFn: () => accessApi.listUserDirectory(selectedCompanyId!),
     enabled: !!selectedCompanyId,
+  });
+
+  const { data: quotaData, isLoading: quotaLoading, error: quotaError } = useQuery({
+    queryKey: queryKeys.usageQuotaWindows(selectedCompanyId!),
+    queryFn: () => costsApi.quotaWindows(selectedCompanyId!),
+    enabled: !!selectedCompanyId,
+    refetchInterval: 300_000,
+    staleTime: 60_000,
   });
 
   const userProfileMap = useMemo(
@@ -305,6 +590,20 @@ export function Dashboard() {
               <SuccessRateChart activity={data.runActivity} />
             </ChartCard>
           </div>
+
+          <QuotaHealthPanel
+            quotaData={quotaData}
+            quotaLoading={quotaLoading}
+            quotaError={quotaError}
+          />
+
+          {data.measurement && (
+            <OutcomeMeasurementPanel
+              outcomeAreas={data.measurement.outcomeAreas}
+              workerRoutes={data.measurement.workerRoutes}
+              routeWindowDays={data.measurement.routeWindowDays}
+            />
+          )}
 
           <PluginSlotOutlet
             slotTypes={["dashboardWidget"]}

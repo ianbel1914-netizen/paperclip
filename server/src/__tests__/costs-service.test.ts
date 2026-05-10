@@ -259,6 +259,71 @@ describe("cost routes", () => {
     });
   });
 
+  it("allows same-company agents to read provider quota windows", async () => {
+    mockCompanyService.getById.mockResolvedValueOnce({
+      id: "company-1",
+      name: "Paperclip",
+    });
+    mockFetchAllQuotaWindows.mockResolvedValueOnce([
+      {
+        provider: "openai",
+        source: "codex-rpc",
+        ok: true,
+        windows: [
+          {
+            label: "5h limit",
+            usedPercent: 42,
+            resetsAt: null,
+            valueLabel: null,
+            detail: null,
+          },
+        ],
+      },
+    ]);
+    const app = await createAppWithActor({
+      type: "agent",
+      agentId: "agent-1",
+      companyId: "company-1",
+      runId: "run-1",
+    });
+
+    const res = await request(app).get("/api/companies/company-1/costs/quota-windows");
+
+    expect(res.status).toBe(200);
+    expect(mockFetchAllQuotaWindows).toHaveBeenCalledTimes(1);
+    expect(res.body).toEqual([
+      {
+        provider: "openai",
+        source: "codex-rpc",
+        ok: true,
+        windows: [
+          {
+            label: "5h limit",
+            usedPercent: 42,
+            resetsAt: null,
+            valueLabel: null,
+            detail: null,
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("rejects cross-company agent quota window reads", async () => {
+    const app = await createAppWithActor({
+      type: "agent",
+      agentId: "agent-1",
+      companyId: "company-2",
+      runId: "run-1",
+    });
+
+    const res = await request(app).get("/api/companies/company-1/costs/quota-windows");
+
+    expect(res.status).toBe(403);
+    expect(mockCompanyService.getById).not.toHaveBeenCalled();
+    expect(mockFetchAllQuotaWindows).not.toHaveBeenCalled();
+  });
+
   it("returns 400 for invalid finance event list limits", async () => {
     const { parseCostLimit } = await loadCostParsers();
     expect(() => parseCostLimit({ limit: "0" })).toThrow(/invalid 'limit'/i);

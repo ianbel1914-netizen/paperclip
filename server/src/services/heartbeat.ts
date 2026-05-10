@@ -1117,6 +1117,14 @@ export function mergeModelProfileAdapterConfig(input: {
   };
 }
 
+export function buildModelProfileFallbackBlockReason(
+  modelProfile: ModelProfileApplication,
+): string | null {
+  if (!modelProfile.requested || modelProfile.applied) return null;
+  if (modelProfile.requested !== "cheap") return null;
+  return `Requested model profile "${modelProfile.requested}" could not be applied (${modelProfile.fallbackReason ?? "unknown"}); refusing to run with the primary adapter config.`;
+}
+
 function modelProfileRunMetadata(
   modelProfile: ModelProfileApplication,
 ): Record<string, unknown> | null {
@@ -5932,6 +5940,8 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
       },
     });
 
+    await finalizeAgentStatus(run.agentId, "cancelled");
+
     return cancelled;
   }
 
@@ -6103,6 +6113,8 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
       message: staleness.reason,
       payload: staleness.details,
     });
+
+    await finalizeAgentStatus(run.agentId, "cancelled");
 
     return cancelled;
   }
@@ -6987,6 +6999,10 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
       if (modelProfileApplication.requested) context.modelProfile = modelProfileApplication.requested;
     } else {
       delete context.paperclipModelProfile;
+    }
+    const modelProfileFallbackBlockReason = buildModelProfileFallbackBlockReason(modelProfileApplication);
+    if (modelProfileFallbackBlockReason) {
+      throw new Error(modelProfileFallbackBlockReason);
     }
     const mergedConfig = mergeModelProfileAdapterConfig({
       baseConfig: persistedWorkspaceManagedConfig,

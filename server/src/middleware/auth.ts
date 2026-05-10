@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import type { Request, RequestHandler } from "express";
 import { and, eq, isNull } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
-import { agentApiKeys, agents, authUsers, companies, companyMemberships, instanceUserRoles } from "@paperclipai/db";
+import { agentApiKeys, agents, authUsers, companies, companyMemberships, heartbeatRuns, instanceUserRoles } from "@paperclipai/db";
 import { verifyLocalAgentJwt } from "../agent-auth-jwt.js";
 import type { DeploymentMode } from "@paperclipai/shared";
 import type { BetterAuthSessionResult } from "../auth/better-auth.js";
@@ -11,6 +11,27 @@ import { boardAuthService } from "../services/board-auth.js";
 
 function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+async function resolveRunIdHeader(db: Db, req: Request, runIdHeader: string | undefined) {
+  const runId = runIdHeader?.trim();
+  if (!runId) return undefined;
+  if (!UUID_RE.test(runId)) {
+    logger.warn({ method: req.method, url: req.originalUrl }, "Ignoring malformed X-Paperclip-Run-Id header");
+    return undefined;
+  }
+  const existing = await db
+    .select({ id: heartbeatRuns.id })
+    .from(heartbeatRuns)
+    .where(eq(heartbeatRuns.id, runId))
+    .then((rows) => rows[0] ?? null);
+  if (!existing) {
+    logger.warn({ runId, method: req.method, url: req.originalUrl }, "Ignoring unknown X-Paperclip-Run-Id header");
+    return undefined;
+  }
+  return runId;
 }
 
 interface ActorMiddlewareOptions {
@@ -34,6 +55,7 @@ export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHa
         : { type: "none", source: "none" };
 
     const runIdHeader = req.header("x-paperclip-run-id");
+    const requestRunId = await resolveRunIdHeader(db, req, runIdHeader ?? undefined);
 
     const authHeader = req.header("authorization");
     if (!authHeader?.toLowerCase().startsWith("bearer ")) {
@@ -42,7 +64,7 @@ export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHa
         if (cloudTenantActor) {
           req.actor = {
             ...cloudTenantActor,
-            runId: runIdHeader ?? undefined,
+            runId: requestRunId,
           };
           next();
           return;
@@ -88,14 +110,14 @@ export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHa
             companyIds: memberships.map((row) => row.companyId),
             memberships,
             isInstanceAdmin: Boolean(roleRow),
-            runId: runIdHeader ?? undefined,
+            runId: requestRunId,
             source: "session",
           };
           next();
           return;
         }
       }
-      if (runIdHeader) req.actor.runId = runIdHeader;
+      if (requestRunId) req.actor.runId = requestRunId;
       next();
       return;
     }
@@ -120,7 +142,7 @@ export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHa
           memberships: access.memberships,
           isInstanceAdmin: access.isInstanceAdmin,
           keyId: boardKey.id,
-          runId: runIdHeader || undefined,
+          runId: requestRunId,
           source: "board_key",
         };
         next();
@@ -163,7 +185,7 @@ export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHa
         agentId: claims.sub,
         companyId: claims.company_id,
         keyId: undefined,
-        runId: runIdHeader || claims.run_id || undefined,
+        runId: requestRunId || claims.run_id || undefined,
         source: "agent_jwt",
       };
       next();
@@ -191,7 +213,7 @@ export function actorMiddleware(db: Db, opts: ActorMiddlewareOptions): RequestHa
       agentId: key.agentId,
       companyId: key.companyId,
       keyId: key.id,
-      runId: runIdHeader || undefined,
+      runId: requestRunId,
       source: "agent_key",
     };
 

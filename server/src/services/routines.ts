@@ -270,6 +270,17 @@ function assertRoutineCanEnable(status: string, assigneeAgentId: string | null |
   }
 }
 
+function routineAssigneeDispatchBlock(
+  agent: Pick<typeof agents.$inferSelect, "status" | "name"> | null,
+) {
+  if (!agent) return "Routine assignee agent no longer exists";
+  if (agent.status === "paused") return `Routine assignee ${agent.name} is paused`;
+  if (agent.status === "error") return `Routine assignee ${agent.name} is in error`;
+  if (agent.status === "pending_approval") return `Routine assignee ${agent.name} is pending approval`;
+  if (agent.status === "terminated") return `Routine assignee ${agent.name} is terminated`;
+  return null;
+}
+
 function collectProvidedRoutineVariables(
   source: "schedule" | "manual" | "api" | "webhook",
   payload: Record<string, unknown> | null | undefined,
@@ -1157,6 +1168,28 @@ export function routineService(
 
       let createdIssue: Awaited<ReturnType<typeof issueSvc.create>> | null = null;
       try {
+        const assignee = await txDb
+          .select({ name: agents.name, status: agents.status })
+          .from(agents)
+          .where(and(eq(agents.id, assigneeAgentId), eq(agents.companyId, input.routine.companyId)))
+          .then((rows) => rows[0] ?? null);
+        const assigneeBlock = routineAssigneeDispatchBlock(assignee);
+        if (assigneeBlock) {
+          const updated = await finalizeRun(createdRun.id, {
+            status: "skipped",
+            failureReason: assigneeBlock,
+            completedAt: triggeredAt,
+          }, txDb);
+          await updateRoutineTouchedState({
+            routineId: input.routine.id,
+            triggerId: input.trigger?.id ?? null,
+            triggeredAt,
+            status: "skipped",
+            nextRunAt,
+          }, txDb);
+          return updated ?? createdRun;
+        }
+
         const activeIssue = await findLiveExecutionIssue(input.routine, txDb, dispatchFingerprint, {
           kind: issueOriginKind,
           id: issueOriginId,

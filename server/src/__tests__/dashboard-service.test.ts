@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { agents, companies, createDb, heartbeatRuns } from "@paperclipai/db";
+import { agents, companies, createDb, heartbeatRuns, issues } from "@paperclipai/db";
 import {
   getEmbeddedPostgresTestSupport,
   startEmbeddedPostgresTestDatabase,
@@ -48,6 +48,7 @@ describeEmbeddedPostgres("dashboard service", () => {
 
   afterEach(async () => {
     await db.delete(heartbeatRuns);
+    await db.delete(issues);
     await db.delete(agents);
     await db.delete(companies);
   });
@@ -165,5 +166,133 @@ describeEmbeddedPostgres("dashboard service", () => {
       other: 1,
       total: 3,
     });
+  });
+
+  it("summarizes outcome areas and worker route effectiveness", async () => {
+    const companyId = randomUUID();
+    const agentId = randomUUID();
+
+    await db.insert(companies).values({
+      id: companyId,
+      name: "Paperclip",
+      issuePrefix: `T${companyId.replace(/-/g, "").slice(0, 6).toUpperCase()}`,
+      requireBoardApprovalForNewAgents: false,
+    });
+
+    await db.insert(agents).values({
+      id: agentId,
+      companyId,
+      name: "CodexCoder",
+      role: "engineer",
+      status: "idle",
+      adapterType: "codex_local",
+      adapterConfig: {},
+      runtimeConfig: {},
+      permissions: {},
+    });
+
+    await db.insert(issues).values([
+      {
+        id: randomUUID(),
+        companyId,
+        title: "Find customers",
+        status: "todo",
+        priority: "high",
+        billingCode: "ejv-revenue",
+      },
+      {
+        id: randomUUID(),
+        companyId,
+        title: "Book calls",
+        status: "done",
+        priority: "high",
+        billingCode: "ejv-revenue",
+      },
+      {
+        id: randomUUID(),
+        companyId,
+        title: "Platform hardening",
+        status: "blocked",
+        priority: "medium",
+        billingCode: "platform",
+      },
+      {
+        id: randomUUID(),
+        companyId,
+        title: "Uncategorized",
+        status: "cancelled",
+        priority: "low",
+      },
+    ]);
+
+    await db.insert(heartbeatRuns).values([
+      {
+        id: randomUUID(),
+        companyId,
+        agentId,
+        invocationSource: "assignment",
+        status: "succeeded",
+        createdAt: utcDay(0),
+        usageJson: {
+          model: "gpt-5.4",
+          costUsd: 0.12,
+          inputTokens: 100,
+          cachedInputTokens: 20,
+          outputTokens: 30,
+        },
+        resultJson: {
+          modelProfile: {
+            requested: "cheap",
+            applied: "cheap",
+          },
+        },
+      },
+      {
+        id: randomUUID(),
+        companyId,
+        agentId,
+        invocationSource: "assignment",
+        status: "failed",
+        createdAt: utcDay(0),
+        usageJson: {
+          model: "gpt-5.4",
+          costUsd: 0.08,
+          inputTokens: 50,
+          cachedInputTokens: 10,
+          outputTokens: 15,
+        },
+        resultJson: {
+          modelProfile: {
+            requested: "cheap",
+            applied: null,
+            fallbackReason: "adapter_profile_not_supported",
+          },
+        },
+      },
+    ]);
+
+    const summary = await dashboardService(db).summary(companyId);
+
+    expect(summary.measurement.outcomeAreas).toEqual([
+      expect.objectContaining({ billingCode: "ejv-revenue", open: 1, done: 1, total: 2 }),
+      expect.objectContaining({ billingCode: "platform", open: 1, blocked: 1, total: 1 }),
+      expect.objectContaining({ billingCode: "uncategorized", cancelled: 1, total: 1 }),
+    ]);
+    expect(summary.measurement.workerRoutes).toEqual([
+      expect.objectContaining({
+        adapterType: "codex_local",
+        model: "gpt-5.4",
+        requestedModelProfile: "cheap",
+        succeeded: 1,
+        failed: 1,
+        fallbackCount: 1,
+        total: 2,
+        successRatePercent: 50,
+        costUsd: 0.2,
+        inputTokens: 150,
+        cachedInputTokens: 30,
+        outputTokens: 45,
+      }),
+    ]);
   });
 });

@@ -501,6 +501,27 @@ describeEmbeddedPostgres("routine service live-execution coalescing", () => {
     ]);
   });
 
+  it("skips routine dispatch without creating issue noise when the assignee is paused", async () => {
+    const { agentId, routine, svc, wakeups } = await seedFixture();
+    await db
+      .update(agents)
+      .set({ status: "paused" })
+      .where(eq(agents.id, agentId));
+
+    const run = await svc.runRoutine(routine.id, { source: "schedule" });
+
+    expect(run.status).toBe("skipped");
+    expect(run.linkedIssueId).toBeNull();
+    expect(run.failureReason).toContain("paused");
+    expect(wakeups).toEqual([]);
+
+    const routineIssues = await db
+      .select({ id: issues.id })
+      .from(issues)
+      .where(eq(issues.originId, routine.id));
+    expect(routineIssues).toHaveLength(0);
+  });
+
   it("records the manual board runner on fresh routine issues so they appear in that user's inbox", async () => {
     const { companyId, agentId, issueSvc, routine, svc } = await seedFixture();
     const userId = randomUUID();

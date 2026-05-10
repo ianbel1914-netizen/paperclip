@@ -225,7 +225,6 @@ export function costRoutes(
   router.get("/companies/:companyId/costs/quota-windows", async (req, res) => {
     const companyId = req.params.companyId as string;
     assertCompanyAccess(req, companyId);
-    assertBoard(req);
     // validate companyId resolves to a real company so the "__none__" sentinel
     // and any forged ids are rejected before we touch provider credentials
     const company = await companies.getById(companyId);

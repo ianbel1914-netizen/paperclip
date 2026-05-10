@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AdapterModelProfileDefinition } from "../adapters/index.js";
 import {
+  buildModelProfileFallbackBlockReason,
   mergeModelProfileAdapterConfig,
   normalizeModelProfileWakeContext,
   resolveModelProfileApplication,
@@ -110,6 +111,7 @@ describe("heartbeat model profile application", () => {
       adapterConfig: null,
     });
     expect(merged).toEqual({ model: "primary" });
+    expect(buildModelProfileFallbackBlockReason(modelProfile)).toContain("refusing to run");
   });
 
   it("normalizes a wake payload model profile into run context", () => {

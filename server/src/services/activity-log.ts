@@ -62,6 +62,12 @@ export interface LogActivityInput {
   details?: Record<string, unknown> | null;
 }
 
+function isActivityRunIdForeignKeyError(err: unknown) {
+  if (!err || typeof err !== "object") return false;
+  const record = err as Record<string, unknown>;
+  return record.code === "23503" && String(record.constraint ?? "").includes("activity_log_run_id");
+}
+
 export async function logActivity(db: Db, input: LogActivityInput) {
   const currentUserRedactionOptions = {
     enabled: (await instanceSettingsService(db).getGeneral()).censorUsernameInLogs,
@@ -70,17 +76,31 @@ export async function logActivity(db: Db, input: LogActivityInput) {
   const redactedDetails = sanitizedDetails
     ? redactCurrentUserValue(sanitizedDetails, currentUserRedactionOptions)
     : null;
-  await db.insert(activityLog).values({
-    companyId: input.companyId,
-    actorType: input.actorType,
-    actorId: input.actorId,
-    action: input.action,
-    entityType: input.entityType,
-    entityId: input.entityId,
-    agentId: input.agentId ?? null,
-    runId: input.runId ?? null,
-    details: redactedDetails,
-  });
+  let persistedRunId = input.runId ?? null;
+  const insertActivity = async (runId: string | null) => db.insert(activityLog).values({
+      companyId: input.companyId,
+      actorType: input.actorType,
+      actorId: input.actorId,
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      agentId: input.agentId ?? null,
+      runId,
+      details: redactedDetails,
+    });
+  try {
+    await insertActivity(persistedRunId);
+  } catch (err) {
+    if (!persistedRunId || !isActivityRunIdForeignKeyError(err)) {
+      throw err;
+    }
+    logger.warn(
+      { err, runId: persistedRunId, action: input.action, entityType: input.entityType, entityId: input.entityId },
+      "activity log run id did not reference an existing heartbeat run; logging without run id",
+    );
+    persistedRunId = null;
+    await insertActivity(null);
+  }
 
   publishLiveEvent({
     companyId: input.companyId,
@@ -92,7 +112,7 @@ export async function logActivity(db: Db, input: LogActivityInput) {
       entityType: input.entityType,
       entityId: input.entityId,
       agentId: input.agentId ?? null,
-      runId: input.runId ?? null,
+      runId: persistedRunId,
       details: redactedDetails,
     },
   });
@@ -111,7 +131,7 @@ export async function logActivity(db: Db, input: LogActivityInput) {
       payload: {
         ...redactedDetails,
         agentId: input.agentId ?? null,
-        runId: input.runId ?? null,
+        runId: persistedRunId,
       },
     };
     publishPluginDomainEvent(event);
