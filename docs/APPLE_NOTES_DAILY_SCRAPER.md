@@ -4,6 +4,16 @@ Date: 2026-05-14
 
 Purpose: define a safe daily import path from Apple Notes into Paperclip.
 
+## Shorthand
+
+In notes or Telegram, `pc` means Paperclip.
+
+Example:
+
+```text
+pc review this tomorrow
+```
+
 ## Scope
 
 The scraper should read only one opt-in Apple Notes folder:
@@ -84,6 +94,15 @@ After the local export is proven, add Paperclip write-back:
 - Never import sensitive notes into agent context automatically.
 - Preserve a JSON export bundle for audit and rollback.
 - The first live run may require Ian to approve macOS Automation permission for Notes on the Mac Mini.
+
+## Required Mac Mini Approval
+
+Before daily automation can run unattended, Ian must approve two layers:
+
+1. Paperclip approval: authorize the Apple Notes daily intake workflow for the Mac Mini.
+2. macOS approval: click the local Automation/Notes permission prompt on the Mac Mini the first time the script runs.
+
+Paperclip can record the workflow approval and audit trail. macOS still controls the actual Notes permission.
 
 ## Command
 

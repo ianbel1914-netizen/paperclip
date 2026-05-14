@@ -2,6 +2,16 @@
 
 Purpose: define Telegram as Ian's mobile command surface for Paperclip.
 
+## Shorthand
+
+Ian can use `pc` as shorthand for Paperclip in Telegram messages.
+
+Examples:
+
+- `pc add this to priorities`
+- `pc put this in parking lot`
+- `pc remind me tomorrow`
+
 ## Role
 
 Telegram is not the system of record. Paperclip is.

@@ -4,6 +4,22 @@ Date: 2026-05-14
 
 Purpose: make it effortless for Ian to capture thoughts anywhere, then let Paperclip organize them into priorities, issues, parking lot items, reminders, and decisions.
 
+## Shorthand
+
+Use `pc` as shorthand for Paperclip in informal capture.
+
+Examples:
+
+```text
+pc add this to parking lot
+```
+
+```text
+pc remind me to review Real Estate Intelligence tomorrow
+```
+
+The CoS layer should interpret `pc` as Paperclip unless the surrounding context clearly means something else.
+
 ## Principle
 
 Ian should not have to think about the system while capturing thoughts.
