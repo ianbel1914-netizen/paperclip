@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/EmptyState";
 import { PageSkeleton } from "@/components/PageSkeleton";
+import { StatusBadge } from "@/components/StatusBadge";
 import { useBreadcrumbs } from "@/context/BreadcrumbContext";
 import { useCompany } from "@/context/CompanyContext";
 import { issuesApi } from "@/api/issues";
@@ -64,6 +65,12 @@ export function Priorities() {
     enabled: !!registerIssue,
   });
 
+  const frontIssuesQuery = useQuery({
+    queryKey: registerIssue && selectedCompanyId ? queryKeys.issues.listByParent(selectedCompanyId, registerIssue.id) : ["priorities", "front-issues", "none"],
+    queryFn: () => issuesApi.list(selectedCompanyId!, { parentId: registerIssue!.id, limit: 100 }),
+    enabled: !!registerIssue && !!selectedCompanyId,
+  });
+
   useEffect(() => {
     if (!documentQuery.data?.body) return;
     setProjects(parsePriorityProjects(documentQuery.data.body));
@@ -113,6 +120,13 @@ export function Priorities() {
     () => rankPriorityProjects(projects),
     [projects],
   );
+  const frontIssuesByIdentifier = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof frontIssuesQuery.data>[number]>();
+    for (const issue of frontIssuesQuery.data ?? []) {
+      if (issue.identifier) map.set(issue.identifier, issue);
+    }
+    return map;
+  }, [frontIssuesQuery.data]);
 
   function updateProject(id: string, patch: Partial<PriorityProject>) {
     setProjects((current) => current.map((project) => (project.id === id ? { ...project, ...patch } : project)));
@@ -181,6 +195,7 @@ export function Priorities() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {rankedProjects.slice(0, 4).map((project, index) => {
                 const front = frontForProject(project.project);
+                const issue = front?.issueIdentifier ? frontIssuesByIdentifier.get(front.issueIdentifier) : null;
                 return (
                   <div key={project.id} className="border border-border p-3">
                     <div className="flex items-start justify-between gap-2">
@@ -190,7 +205,10 @@ export function Priorities() {
                       </div>
                       <div className="text-lg font-semibold">{totalScore(project)}</div>
                     </div>
-                    <div className="mt-2 text-xs text-muted-foreground">{front?.stage ?? project.posture}</div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{front?.stage ?? project.posture}</span>
+                      {issue ? <StatusBadge status={issue.status} /> : null}
+                    </div>
                     <div className="mt-2 text-xs">{front?.nextMilestone ?? project.notes}</div>
                   </div>
                 );
@@ -213,6 +231,7 @@ export function Priorities() {
                       <th className="px-3 py-2 text-left font-medium">Rank</th>
                       <th className="px-3 py-2 text-left font-medium">Project</th>
                       <th className="px-3 py-2 text-left font-medium">Stage</th>
+                      <th className="px-3 py-2 text-left font-medium">Status</th>
                       <th className="px-3 py-2 text-left font-medium">Front</th>
                       {SCORE_FIELDS.map((field) => (
                         <th key={field} className="px-2 py-2 text-center font-medium">{SCORE_LABELS[field]}</th>
@@ -225,6 +244,7 @@ export function Priorities() {
                   <tbody>
                     {rankedProjects.map((project, index) => {
                       const front = frontForProject(project.project);
+                      const issue = front?.issueIdentifier ? frontIssuesByIdentifier.get(front.issueIdentifier) : null;
                       return (
                         <tr key={project.id} className="border-t border-border align-top">
                           <td className="px-3 py-2 text-muted-foreground">{index + 1}</td>
@@ -239,6 +259,9 @@ export function Priorities() {
                             <span className="inline-flex min-w-[120px] items-center border border-border px-2 py-1 text-xs">
                               {front?.stage ?? "Unmapped"}
                             </span>
+                          </td>
+                          <td className="px-3 py-2">
+                            {issue ? <StatusBadge status={issue.status} /> : <span className="text-xs text-muted-foreground">No issue</span>}
                           </td>
                           <td className="px-3 py-2">
                             {front ? (
