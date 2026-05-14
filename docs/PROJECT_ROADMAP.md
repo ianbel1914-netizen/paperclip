@@ -43,23 +43,45 @@ Use this scoring frame when choosing the next project. Score 1-5.
 | Cost and quota risk | Can we run it cheaply and safely? |
 | Repeatability | Will the workflow teach Paperclip patterns reused elsewhere? |
 | Dependency unlock | Does it unblock other projects? |
+| Life fit | Does it increase energy, family time, meaning, and long-term freedom? |
 
 ## Initial Scoring
 
-| Project | Strategic | Revenue | Readiness | Speed | Cost Safety | Repeatability | Unlock | Total |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Paperclip Control Plane | 5 | 3 | 5 | 4 | 5 | 5 | 5 | 32 |
-| EJV Labs Revenue Engine | 5 | 5 | 3 | 4 | 3 | 5 | 4 | 29 |
-| Chief of Staff Office | 5 | 3 | 4 | 4 | 4 | 5 | 4 | 29 |
-| IanOS | 5 | 2 | 3 | 3 | 4 | 4 | 4 | 25 |
-| Real Estate Portfolio Intelligence | 5 | 4 | 3 | 3 | 3 | 4 | 3 | 25 |
-| Acquisition Analysis Tool | 5 | 4 | 2 | 3 | 3 | 4 | 3 | 24 |
-| Growth and Social Listening | 4 | 4 | 3 | 3 | 2 | 5 | 3 | 24 |
-| FamilyOS | 4 | 1 | 3 | 3 | 4 | 3 | 2 | 20 |
-| Local Worker Pool | 4 | 1 | 3 | 3 | 5 | 4 | 4 | 24 |
-| OpenClaw Memory Integration | 5 | 1 | 3 | 2 | 4 | 5 | 5 | 25 |
+| Project | Strategic | Revenue | Readiness | Speed | Cost Safety | Repeatability | Unlock | Life Fit | Total |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Paperclip Control Plane | 5 | 3 | 5 | 4 | 5 | 5 | 5 | 4 | 36 |
+| Chief of Staff Office | 5 | 3 | 4 | 4 | 4 | 5 | 4 | 5 | 34 |
+| EJV Labs Revenue Engine | 5 | 5 | 3 | 4 | 3 | 5 | 4 | 3 | 32 |
+| Real Estate Portfolio Intelligence | 5 | 4 | 3 | 3 | 3 | 4 | 3 | 4 | 29 |
+| IanOS | 5 | 2 | 3 | 3 | 4 | 4 | 4 | 5 | 30 |
+| Acquisition Analysis Tool | 5 | 4 | 2 | 3 | 3 | 4 | 3 | 3 | 27 |
+| Growth and Social Listening | 4 | 4 | 3 | 3 | 2 | 5 | 3 | 2 | 26 |
+| Local Worker Pool | 4 | 1 | 3 | 3 | 5 | 4 | 4 | 4 | 28 |
+| OpenClaw Memory Integration | 5 | 1 | 3 | 2 | 4 | 5 | 5 | 4 | 29 |
+| FamilyOS | 4 | 1 | 3 | 3 | 4 | 3 | 2 | 5 | 25 |
 
-The score says: finish the control plane, design the Chief of Staff layer in parallel, then make EJV Labs Revenue Engine the first business pilot.
+The score says: finish the control plane, design the Chief of Staff layer in parallel, then make EJV Labs Revenue Engine the first business pilot unless Real Estate Intelligence has an urgent live operating need. The Life Fit score keeps IanOS, FamilyOS, and the Chief of Staff layer visible because fulfillment, family time, and mental load reduction are first-class outcomes.
+
+## Priority Dashboard And Accountability
+
+The Paperclip Priorities page should be the web-accessible cockpit for this roadmap.
+
+Core views:
+
+- Priority rank and total score
+- Recommended attention allocation by project
+- Current primary focus and active-watch fronts
+- Linked Paperclip front issue status
+- Current Ian decision
+- Revision history and restore
+
+Chief of Staff accountability behavior:
+
+- Weekly, compare actual work to the dashboard.
+- Ask Ian to re-score when a new opportunity or personal need changes the picture.
+- Protect one primary focus and at most two active-watch fronts.
+- Push back on new work that does not score high enough or lacks a clear life/revenue/platform reason.
+- Report evidence, blockers, quota state, and decisions needed.
 
 ## Roadmap Map
 

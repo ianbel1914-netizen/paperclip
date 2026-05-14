@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, History, ListChecks, Plus, RotateCcw, Save } from "lucide-react";
+import { ExternalLink, History, ListChecks, Plus, RotateCcw, Save, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,8 +17,10 @@ import {
   SCORE_FIELDS,
   SCORE_LABELS,
   SCORING_CRITERIA,
+  attentionShare,
   buildPriorityMarkdown,
   clampScore,
+  focusBand,
   frontForProject,
   newPriorityProject,
   parseCurrentDecision,
@@ -120,6 +122,8 @@ export function Priorities() {
     () => rankPriorityProjects(projects),
     [projects],
   );
+  const primaryFocus = rankedProjects[0] ?? null;
+  const activeWatch = rankedProjects.slice(1, 3);
   const frontIssuesByIdentifier = useMemo(() => {
     const map = new Map<string, NonNullable<typeof frontIssuesQuery.data>[number]>();
     for (const issue of frontIssuesQuery.data ?? []) {
@@ -157,7 +161,7 @@ export function Priorities() {
         <div>
           <h1 className="text-2xl font-semibold tracking-normal">Priorities</h1>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Live project scoring for {selectedCompany?.name ?? "this company"}. Saves update the Paperclip document and preserve revision history.
+            Live project scoring, fulfillment fit, and recommended attention for {selectedCompany?.name ?? "this company"}. Saves update the Paperclip document and preserve revision history.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -192,28 +196,103 @@ export function Priorities() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <section className="min-w-0 space-y-4">
           {!rawMode ? (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              {rankedProjects.slice(0, 4).map((project, index) => {
-                const front = frontForProject(project.project);
-                const issue = front?.issueIdentifier ? frontIssuesByIdentifier.get(front.issueIdentifier) : null;
-                return (
-                  <div key={project.id} className="border border-border p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="text-xs text-muted-foreground">Rank {index + 1}</div>
-                        <div className="mt-1 text-sm font-semibold">{project.project}</div>
+            <>
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="border border-border p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold">
+                        <Target className="h-4 w-4 text-primary" />
+                        Attention Dashboard
                       </div>
-                      <div className="text-lg font-semibold">{totalScore(project)}</div>
+                      <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
+                        Recommended focus based on score, posture, and portfolio stage. Use this to decide what gets real work this week.
+                      </p>
                     </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{front?.stage ?? project.posture}</span>
-                      {issue ? <StatusBadge status={issue.status} /> : null}
-                    </div>
-                    <div className="mt-2 text-xs">{front?.nextMilestone ?? project.notes}</div>
+                    {primaryFocus ? (
+                      <div className="text-right">
+                        <div className="text-xs text-muted-foreground">Primary focus</div>
+                        <div className="text-sm font-semibold">{primaryFocus.project}</div>
+                      </div>
+                    ) : null}
                   </div>
-                );
-              })}
-            </div>
+
+                  <div className="mt-4 space-y-3">
+                    {rankedProjects.slice(0, 6).map((project, index) => {
+                      const front = frontForProject(project.project);
+                      const issue = front?.issueIdentifier ? frontIssuesByIdentifier.get(front.issueIdentifier) : null;
+                      const share = attentionShare(project, rankedProjects);
+                      return (
+                        <div key={project.id}>
+                          <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                            <div className="min-w-0">
+                              <span className="font-medium">{project.project}</span>
+                              <span className="ml-2 text-muted-foreground">{focusBand(project, index)}</span>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                              {issue ? <StatusBadge status={issue.status} /> : null}
+                              <span className="tabular-nums text-muted-foreground">{share}%</span>
+                            </div>
+                          </div>
+                          <div className="h-2 overflow-hidden bg-muted">
+                            <div
+                              className="h-full bg-primary"
+                              style={{ width: `${Math.max(4, share)}%` }}
+                            />
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">{front?.nextMilestone ?? project.notes}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="border border-border p-4">
+                  <h2 className="text-sm font-semibold">Accountability Loop</h2>
+                  <dl className="mt-3 space-y-3 text-xs">
+                    <div>
+                      <dt className="font-medium">This week</dt>
+                      <dd className="mt-0.5 text-muted-foreground">
+                        Advance {primaryFocus?.project ?? "the top priority"} and keep {activeWatch.map((project) => project.project).join(" / ") || "secondary fronts"} visible.
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium">Ian decision</dt>
+                      <dd className="mt-0.5 text-muted-foreground">{decisionNote || "Record the current decision before starting new work."}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium">CoS behavior</dt>
+                      <dd className="mt-0.5 text-muted-foreground">
+                        Ask for a priority update when new work competes with the primary focus, and summarize evidence weekly.
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {rankedProjects.slice(0, 4).map((project, index) => {
+                  const front = frontForProject(project.project);
+                  const issue = front?.issueIdentifier ? frontIssuesByIdentifier.get(front.issueIdentifier) : null;
+                  return (
+                    <div key={project.id} className="border border-border p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-xs text-muted-foreground">Rank {index + 1}</div>
+                          <div className="mt-1 text-sm font-semibold">{project.project}</div>
+                        </div>
+                        <div className="text-lg font-semibold">{totalScore(project)}</div>
+                      </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">{front?.stage ?? project.posture}</span>
+                        {issue ? <StatusBadge status={issue.status} /> : null}
+                      </div>
+                      <div className="mt-2 text-xs">{front?.nextMilestone ?? project.notes}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           ) : null}
 
           {rawMode ? (
@@ -225,7 +304,7 @@ export function Priorities() {
           ) : (
             <>
               <div className="overflow-x-auto border border-border">
-                <table className="w-full min-w-[1380px] border-collapse text-sm">
+                <table className="w-full min-w-[1480px] border-collapse text-sm">
                   <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                     <tr>
                       <th className="px-3 py-2 text-left font-medium">Rank</th>

@@ -9,6 +9,7 @@ export const SCORE_FIELDS = [
   "costSafety",
   "repeatability",
   "unlock",
+  "lifeFit",
 ] as const;
 
 export type ScoreField = (typeof SCORE_FIELDS)[number];
@@ -23,6 +24,7 @@ export interface PriorityProject {
   costSafety: number;
   repeatability: number;
   unlock: number;
+  lifeFit: number;
   posture: string;
   notes: string;
 }
@@ -45,6 +47,7 @@ export const SCORE_LABELS: Record<ScoreField, string> = {
   costSafety: "Cost Safety",
   repeatability: "Repeatability",
   unlock: "Unlock",
+  lifeFit: "Life Fit",
 };
 
 export const SCORING_CRITERIA = [
@@ -55,6 +58,7 @@ export const SCORING_CRITERIA = [
   ["Cost safety", "Can we run it cheaply and safely?"],
   ["Repeatability", "Will the workflow teach Paperclip patterns reused elsewhere?"],
   ["Dependency unlock", "Does it unblock other projects?"],
+  ["Life fit", "Does it increase energy, family time, meaning, and long-term freedom?"],
 ] as const;
 
 export const PORTFOLIO_FRONTS: PortfolioFront[] = [
@@ -182,6 +186,21 @@ export function totalScore(project: PriorityProject) {
   return SCORE_FIELDS.reduce((sum, field) => sum + clampScore(project[field]), 0);
 }
 
+export function attentionShare(project: PriorityProject, projects: PriorityProject[]) {
+  const ranked = rankPriorityProjects(projects);
+  const total = ranked.reduce((sum, item) => sum + totalScore(item), 0);
+  if (total <= 0) return 0;
+  return Math.round((totalScore(project) / total) * 100);
+}
+
+export function focusBand(project: PriorityProject, rank: number) {
+  const posture = project.posture.toLowerCase();
+  if (rank === 0 || posture.includes("active") || posture.includes("gate")) return "Primary focus";
+  if (posture.includes("backlog") || posture.includes("later")) return "Backlog";
+  if (rank <= 2 || posture.includes("pilot") || posture.includes("candidate")) return "Active watch";
+  return "Maintain";
+}
+
 function cleanCell(value: string) {
   return value.replace(/^\\|/, "").replace(/\\|$/, "").trim();
 }
@@ -215,6 +234,7 @@ export function parsePriorityProjects(markdown: string): PriorityProject[] {
     if (cells.length < 12) continue;
     const projectName = cells[1] ?? "";
     if (!projectName) continue;
+    const hasLifeFit = cells.length >= 13;
 
     rows.push({
       id: `${projectName}-${rows.length}`,
@@ -226,8 +246,9 @@ export function parsePriorityProjects(markdown: string): PriorityProject[] {
       costSafety: parseScore(cells[6] ?? "1"),
       repeatability: parseScore(cells[7] ?? "1"),
       unlock: parseScore(cells[8] ?? "1"),
-      posture: cells[10] ?? "",
-      notes: cells[11] ?? "",
+      lifeFit: hasLifeFit ? parseScore(cells[9] ?? "3") : 3,
+      posture: cells[hasLifeFit ? 11 : 10] ?? "",
+      notes: cells[hasLifeFit ? 12 : 11] ?? "",
     });
   }
 
@@ -256,6 +277,7 @@ export function buildPriorityMarkdown(projects: PriorityProject[], decisionNote:
       clampScore(project.costSafety),
       clampScore(project.repeatability),
       clampScore(project.unlock),
+      clampScore(project.lifeFit),
       project.total,
       escapeTableCell(project.posture),
       escapeTableCell(project.notes),
@@ -276,8 +298,8 @@ ${SCORING_CRITERIA.map(([criterion, question]) => `| ${criterion} | ${question} 
 
 ## Current Scores
 
-| Rank | Project | Strategic | Revenue | Readiness | Speed | Cost Safety | Repeatability | Unlock | Total | Recommended Posture | Notes |
-| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| Rank | Project | Strategic | Revenue | Readiness | Speed | Cost Safety | Repeatability | Unlock | Life Fit | Total | Recommended Posture | Notes |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
 ${rows.map((row) => `| ${row} |`).join("\n")}
 
 ## Current Decision
@@ -316,6 +338,7 @@ export function newPriorityProject(): PriorityProject {
     costSafety: 3,
     repeatability: 3,
     unlock: 3,
+    lifeFit: 3,
     posture: "Candidate",
     notes: "",
   };

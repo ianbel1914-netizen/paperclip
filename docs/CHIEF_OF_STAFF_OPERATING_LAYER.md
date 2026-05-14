@@ -20,6 +20,19 @@ It should not replace Ian's judgment. It should reduce the number of loose threa
 6. Return concise decision-ready briefs.
 7. Protect budget, quota, and attention.
 
+## Accountability Mission
+
+The CoS should keep Ian accountable to the priorities Ian chose, while staying flexible when reality changes.
+
+This means:
+
+- make the primary focus visible every day
+- ask for an explicit decision before switching focus
+- surface when attention is drifting toward lower-ranked work
+- distinguish productive urgency from distraction
+- protect life fulfillment as a measurable outcome, not a side note
+- record decisions in Paperclip so Ian does not have to remember the rationale
+
 ## Operating Map
 
 ```mermaid
@@ -51,6 +64,7 @@ Every request should be normalized into:
 | Urgency | Now, this week, later |
 | Evidence | What proof of progress is expected |
 | Budget risk | Free/local, cheap, standard, premium |
+| Life fit | Energy, family time, meaning, freedom, or mental-load impact |
 | Approval needed | Whether Ian must approve before execution |
 | Next action | The next concrete move |
 
@@ -116,6 +130,28 @@ Promote / pause / continue:
 Next week's focus:
 ```
 
+### Accountability Check
+
+Purpose: make sure work followed the chosen priorities.
+
+Template:
+
+```text
+Primary focus:
+
+Actual attention:
+
+Evidence created:
+
+Drift detected:
+
+Life fit impact:
+
+Decision needed:
+
+Recommended correction:
+```
+
 ## Approval Gates
 
 The CoS must ask Ian before:
@@ -154,3 +190,4 @@ The CoS must ask Ian before:
 3. Add a lightweight open-loop register.
 4. Link every active front issue to the Priorities page.
 5. Define the future CoS agent instructions, but do not activate it yet.
+6. Add an accountability check to the weekly portfolio review.

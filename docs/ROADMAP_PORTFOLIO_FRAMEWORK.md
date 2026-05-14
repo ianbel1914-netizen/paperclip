@@ -4,6 +4,20 @@ Date: 2026-05-14
 
 Purpose: make every roadmap project visible as an operating front, while still forcing explicit prioritization before major execution work starts.
 
+## Life Fulfillment Lens
+
+The prioritization system should protect Ian's life, not only maximize output. Every major front gets a `Life Fit` score from 1-5.
+
+Score high when a project:
+
+- increases energy rather than only obligations
+- gives Ian more family time or reduces household drag
+- creates meaning, creativity, or strategic leverage
+- improves long-term freedom and optionality
+- reduces the number of unresolved loops Ian has to carry personally
+
+Score low when a project is mostly urgency, noise, prestige, or complexity without a clear personal/business payoff. Revenue can justify hard work, but it should not silently crowd out health, family, and the reasons Ian is building this system.
+
 ## Portfolio Principle
 
 Paperclip should show progress across all fronts, but it should not start all fronts at once. The operating model is:
@@ -52,6 +66,43 @@ Required behavior when stopping:
 | Telegram Command Channel | `telegram-command` | Platform support | Mobile control surface for Paperclip | commands handled, audit trail preserved | Define allowed commands and escalation rules |
 | Local Worker Pool | `local-worker-pool` | Platform experiment | Cheaper background work on local mini PCs | tasks benchmarked, cost reduced, quality accepted | Pick first low-risk local benchmark task |
 | OpenClaw Memory Integration | `openclaw-memory` | Platform dependency | Durable memory and identity across teams | memory contract, recall quality, fewer repeated prompts | Define memory schema and sync boundary |
+
+## Web Dashboard
+
+The Priorities page is the live portfolio cockpit.
+
+It should show:
+
+- ranked projects and score history
+- `Life Fit` alongside revenue, strategic value, readiness, cost safety, repeatability, and unlock value
+- recommended attention allocation by front
+- primary focus, active watch items, and backlog
+- linked front issue status
+- next milestone and current Ian decision
+- document revision history with restore
+
+Early attention allocation is recommendation-based. It uses the score and posture of each project to show where attention should go. Later, Paperclip should add measured attention from comments, agent runs, commits, issue status changes, and calendar/time logs.
+
+## Accountability Framework
+
+The Chief of Staff layer owns accountability. Its job is to make drift visible without creating shame or noise.
+
+Weekly loop:
+
+1. Compare actual work against the Priorities dashboard.
+2. Ask Ian whether any new urgency changes the score.
+3. Record the current decision in the priority register.
+4. Promote one primary focus and at most two active-watch fronts.
+5. Summarize evidence created, blockers, quota state, and next decisions.
+6. Push back when low-priority work competes with the chosen focus.
+
+Accountability questions:
+
+- Did the top priority receive real progress this week?
+- Did the work create evidence, revenue, leverage, or life relief?
+- Did any urgent request deserve a score change?
+- Are we protecting quota, money, energy, and family time?
+- What should be stopped, paused, or delegated?
 
 ## Standard Front Template
 
