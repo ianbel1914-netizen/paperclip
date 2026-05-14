@@ -34,6 +34,13 @@ The parking lot should live with Priorities, but outside the scored priority tab
 
 Use it for ideas that matter enough to remember but should not compete for execution attention yet. A parking lot item can become a scored project later when Ian decides it deserves discovery, a front issue, or real work.
 
+Access model:
+
+- Keep the main entry point as `Priorities`.
+- Add parking lot access inside that page as a separate panel or tab.
+- Back it with a Paperclip document on `IAN-79`, separate from the scored `priorities` document, so it gets revision history without polluting the ranking table.
+- Do not add another top-level sidebar item until the parking lot becomes a daily workflow.
+
 Rules:
 
 - Parking lot items are visible, named, and lightly described.
@@ -47,6 +54,8 @@ Current parking lot:
 | Item | Tag | Why Keep It | Promotion Trigger |
 | --- | --- | --- | --- |
 | Sports section | `fun` / `life` / `sports` | Sports is a natural place for fun, identity, social energy, and playful dashboard experiments. | Promote when Ian wants Paperclip/IanOS to track sports interests, trips, fantasy, tickets, memories, or shared family/friend rituals. |
+| ClickUp integration | `integration` / `team-backend` / `later` | Ian's teams run work in ClickUp, but the interface gets messy quickly. Paperclip may eventually need read-only visibility into tasks without making Ian operate there. | Promote after the Paperclip drilldown model is stable and one team workflow needs status pulled into Paperclip. Start read-only. |
+| Notion integration | `integration` / `knowledge-backend` / `later` | Notion holds team docs and structured knowledge, but should be a backend source rather than Ian's command surface. | Promote when a front needs Notion docs/databases in agent context or Paperclip drilldowns. Start with links/read-only import. |
 
 ## Quota Stop Rule
 

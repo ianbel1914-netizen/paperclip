@@ -34,9 +34,13 @@ IanOS should remain the personal command center vision, but it depends on the pl
 
 The parking lot belongs next to Priorities, not inside the active scoring table. It is the place for ideas we want to preserve without pretending they are current commitments.
 
+Access should live inside the `Priorities` page as a separate panel or tab, backed by its own Paperclip document with revision history. That keeps parking lot items easy to find without turning every interesting idea into a scored project.
+
 | Item | Why It Matters | Current Call |
 | --- | --- | --- |
 | Sports section | Fun should be designed into IanOS and Paperclip. Sports could become a joyful dashboard surface for fandom, trips, fantasy, tickets, memories, family/friend rituals, or playful data experiments. | Keep parked until Ian wants it promoted into a scored project or IanOS module. |
+| ClickUp integration | Teams use ClickUp, so Paperclip may eventually need read-only visibility into team task status. The risk is importing ClickUp's mess into Ian's cockpit. | Park until Paperclip drilldowns are stable; promote only as read-only status sync first. |
+| Notion integration | Teams use Notion for docs and knowledge. Paperclip should be able to reference that knowledge without requiring Ian to operate out of Notion. | Park until a front needs Notion docs/databases in agent context or drilldown views. |
 
 ## Prioritization Criteria
 
