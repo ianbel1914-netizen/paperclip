@@ -28,6 +28,26 @@ Paperclip should show progress across all fronts, but it should not start all fr
 4. Use lightweight discovery, docs, and issue grooming on lower-ranked fronts so they are ready when promoted.
 5. Preserve history through Paperclip issue comments and document revisions.
 
+## Parking Lot
+
+The parking lot should live with Priorities, but outside the scored priority table.
+
+Use it for ideas that matter enough to remember but should not compete for execution attention yet. A parking lot item can become a scored project later when Ian decides it deserves discovery, a front issue, or real work.
+
+Rules:
+
+- Parking lot items are visible, named, and lightly described.
+- They are not counted in the ranked priority score.
+- They can have tags like `fun`, `life`, `business`, `family`, `sports`, or `later`.
+- They should be reviewed during weekly portfolio review.
+- Promotion requires a short reason and, if needed, a new score.
+
+Current parking lot:
+
+| Item | Tag | Why Keep It | Promotion Trigger |
+| --- | --- | --- | --- |
+| Sports section | `fun` / `life` / `sports` | Sports is a natural place for fun, identity, social energy, and playful dashboard experiments. | Promote when Ian wants Paperclip/IanOS to track sports interests, trips, fantasy, tickets, memories, or shared family/friend rituals. |
+
 ## Quota Stop Rule
 
 For unattended Codex work, stop before the seven-day quota gets tight.
@@ -74,6 +94,7 @@ The Priorities page is the live portfolio cockpit.
 It should show:
 
 - ranked projects and score history
+- parking lot items that should be remembered but not scored yet
 - `Life Fit` alongside revenue, strategic value, readiness, cost safety, repeatability, and unlock value
 - recommended attention allocation by front
 - primary focus, active watch items, and backlog

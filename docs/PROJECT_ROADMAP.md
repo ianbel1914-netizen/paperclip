@@ -30,6 +30,14 @@ IanOS should remain the personal command center vision, but it depends on the pl
 | Local Worker Pool | Use mini PCs and local/open models for cheap work | Local routes for tagging, extraction, simple summaries | Cost per task reduced without quality loss |
 | OpenClaw Memory Integration | Persistent identity and memory layer | Durable memory contract across sessions and agents | Recall quality and lower repeated context |
 
+## Parking Lot
+
+The parking lot belongs next to Priorities, not inside the active scoring table. It is the place for ideas we want to preserve without pretending they are current commitments.
+
+| Item | Why It Matters | Current Call |
+| --- | --- | --- |
+| Sports section | Fun should be designed into IanOS and Paperclip. Sports could become a joyful dashboard surface for fandom, trips, fantasy, tickets, memories, family/friend rituals, or playful data experiments. | Keep parked until Ian wants it promoted into a scored project or IanOS module. |
+
 ## Prioritization Criteria
 
 Use this scoring frame when choosing the next project. Score 1-5.
@@ -69,6 +77,7 @@ The Paperclip Priorities page should be the web-accessible cockpit for this road
 Core views:
 
 - Priority rank and total score
+- Parking lot for ideas worth remembering but not executing yet
 - Recommended attention allocation by project
 - Current primary focus and active-watch fronts
 - Linked Paperclip front issue status
