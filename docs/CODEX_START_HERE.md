@@ -66,18 +66,31 @@ Current known agents:
 - CTO: `216de83a-e21f-45e1-8d96-eba4821006a2`
 - Coder: `9dd03466-3bdf-422b-aa1a-9eae24a3dec9`
 - Coder 2: `7aa4547f-ab6b-4bcc-8046-14ce402a77df`
+- Codex Engineer: `4e6af8a9-cc2a-4003-bdad-48cd64fd8feb`
 
 Latest known smoke state:
 
-- active agents: 2
+- active agents: 3
 - running agents: 0
 - paused agents: 2
 - error agents: 0
+
+Codex Engineer status:
+
+- adapter: `codex_local`
+- heartbeat disabled
+- wake-on-demand disabled
+- max concurrency: 1
+- monthly budget: 1000 cents
+- model: `gpt-5.3-codex-spark`
+- posture: present but dormant until Ian explicitly approves a smoke run
 
 ## What Has Been Built
 
 See:
 
+- `docs/PROJECT_ROADMAP.md`
+- `docs/PAPERCLIP_SYSTEM_MEMO.md`
 - `docs/MORNING_BRIEF_2026-05-10.md`
 - `docs/JOURNEY_MEMO.md`
 - `docs/OUTCOME_MEASUREMENT.md`
@@ -98,12 +111,13 @@ Implemented control-plane changes include:
 
 ## Known Open Risks
 
-Quota visibility is now surfaced, but the live probes are not green:
+Quota visibility is now surfaced. Latest known live state:
 
-- Claude quota probe is failing despite claude.ai Max login.
-- Codex quota probe is failing on the Mac Mini because the local Codex executable/token is not available there.
+- Claude quota probe: green via `claude-cli`.
+- Codex quota probe: green via `codex-rpc`.
+- Codex login on the Mac Mini: verified with `codex login status`.
 
-Do not resume heavy autonomous work until quota checks are green or Ian explicitly accepts a route around them.
+Do not resume heavy autonomous work until quota checks are rechecked as green in the current session or Ian explicitly accepts a route around them.
 
 There are also unrelated dirty files on the Mac Mini that should not be reverted without inspection:
 
@@ -159,11 +173,12 @@ Invoke-RestMethod -Headers $headers "$base/api/companies/$company/costs/quota-wi
 
 ## Next Recommended Work
 
-1. Fix Claude and Codex quota probes so Quota Watch turns green.
-2. Create a Chief of Staff operating layer design before adding more agent companies.
-3. Add typed outcome fields after the billing-code convention stabilizes.
-4. Design the OpenClaw memory integration contract.
-5. Only then consider a tiny CEO-only smoke heartbeat with no delegation.
+1. Recheck Quota Watch for Claude and Codex.
+2. Run the `IAN-78` Codex Engineer no-code smoke issue only if Ian explicitly approves it.
+3. Create a Chief of Staff operating layer design before adding more agent companies.
+4. Start the EJV Labs Revenue Engine as the first business pilot after the control gates pass.
+5. Add typed outcome fields after the billing-code convention stabilizes.
+6. Design the OpenClaw memory integration contract.
 
 ## Operating Principle
 
