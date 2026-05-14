@@ -20,8 +20,8 @@ For unattended Codex work, stop before the seven-day quota gets tight.
 
 Hard stop:
 
-- If OpenAI/Codex `Weekly limit` usage is greater than or equal to 50%, stop work.
-- If GPT-5.3-Codex-Spark weekly usage is greater than or equal to 50%, stop work.
+- If OpenAI/Codex `Weekly limit` usage is greater than or equal to 75%, stop work.
+- If GPT-5.3-Codex-Spark weekly usage is greater than or equal to 75%, stop work.
 - If quota status is unavailable, stale, or ambiguous, stop work unless Ian explicitly approves continuing.
 
 Soft caution:

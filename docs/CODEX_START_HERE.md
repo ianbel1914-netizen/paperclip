@@ -44,8 +44,8 @@ Do not do these without explicit Ian approval:
 Unattended Codex quota stop rule:
 
 - Check Paperclip Quota Watch before and during long work blocks.
-- Stop if OpenAI/Codex `Weekly limit` usage is greater than or equal to 50%.
-- Stop if GPT-5.3-Codex-Spark weekly usage is greater than or equal to 50%.
+- Stop if OpenAI/Codex `Weekly limit` usage is greater than or equal to 75%.
+- Stop if GPT-5.3-Codex-Spark weekly usage is greater than or equal to 75%.
 - Stop if quota data is unavailable, stale, or ambiguous.
 - On stop, commit/push coherent completed work if possible, leave a Paperclip comment, and write the next safe step.
 

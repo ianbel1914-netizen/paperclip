@@ -10,200 +10,22 @@ import { useBreadcrumbs } from "@/context/BreadcrumbContext";
 import { useCompany } from "@/context/CompanyContext";
 import { issuesApi } from "@/api/issues";
 import { queryKeys } from "@/lib/queryKeys";
-
-const REGISTER_TITLE = "Project Prioritization Register";
-const REGISTER_DOCUMENT_KEY = "priorities";
-const SCORE_FIELDS = [
-  "strategic",
-  "revenue",
-  "readiness",
-  "speed",
-  "costSafety",
-  "repeatability",
-  "unlock",
-] as const;
-
-type ScoreField = (typeof SCORE_FIELDS)[number];
-
-interface PriorityProject {
-  id: string;
-  project: string;
-  strategic: number;
-  revenue: number;
-  readiness: number;
-  speed: number;
-  costSafety: number;
-  repeatability: number;
-  unlock: number;
-  posture: string;
-  notes: string;
-}
-
-const SCORE_LABELS: Record<ScoreField, string> = {
-  strategic: "Strategic",
-  revenue: "Revenue",
-  readiness: "Readiness",
-  speed: "Speed",
-  costSafety: "Cost Safety",
-  repeatability: "Repeatability",
-  unlock: "Unlock",
-};
-
-const SCORING_CRITERIA = [
-  ["Strategic value", "Does this compound across Ian's work?"],
-  ["Revenue immediacy", "Can it help customers, pipeline, or revenue soon?"],
-  ["Data readiness", "Do we have enough data/access to start?"],
-  ["Speed", "Can we ship a narrow useful version quickly?"],
-  ["Cost safety", "Can we run it cheaply and safely?"],
-  ["Repeatability", "Will the workflow teach Paperclip patterns reused elsewhere?"],
-  ["Dependency unlock", "Does it unblock other projects?"],
-];
-
-function clampScore(value: number) {
-  if (!Number.isFinite(value)) return 1;
-  return Math.max(1, Math.min(5, Math.round(value)));
-}
-
-function totalScore(project: PriorityProject) {
-  return SCORE_FIELDS.reduce((sum, field) => sum + clampScore(project[field]), 0);
-}
-
-function cleanCell(value: string) {
-  return value.replace(/^\\|/, "").replace(/\\|$/, "").trim();
-}
-
-function splitMarkdownRow(line: string) {
-  const trimmed = line.trim();
-  const withoutOuter = trimmed.startsWith("|") ? trimmed.slice(1) : trimmed;
-  const normalized = withoutOuter.endsWith("|") ? withoutOuter.slice(0, -1) : withoutOuter;
-  return normalized.split("|").map(cleanCell);
-}
-
-function parseScore(value: string) {
-  const parsed = Number.parseInt(value.trim(), 10);
-  return clampScore(parsed);
-}
-
-function parsePriorityProjects(markdown: string): PriorityProject[] {
-  const lines = markdown.split(/\r?\n/);
-  const headingIndex = lines.findIndex((line) => line.trim().toLowerCase() === "## current scores");
-  if (headingIndex === -1) return [];
-
-  const rows: PriorityProject[] = [];
-  for (let i = headingIndex + 1; i < lines.length; i += 1) {
-    const line = lines[i]?.trim() ?? "";
-    if (line.startsWith("## ")) break;
-    if (!line.startsWith("|")) continue;
-    if (/^\|\s*-/.test(line)) continue;
-    if (line.toLowerCase().includes("| rank |")) continue;
-
-    const cells = splitMarkdownRow(line);
-    if (cells.length < 12) continue;
-    const projectName = cells[1] ?? "";
-    if (!projectName) continue;
-
-    rows.push({
-      id: `${projectName}-${rows.length}`,
-      project: projectName,
-      strategic: parseScore(cells[2] ?? "1"),
-      revenue: parseScore(cells[3] ?? "1"),
-      readiness: parseScore(cells[4] ?? "1"),
-      speed: parseScore(cells[5] ?? "1"),
-      costSafety: parseScore(cells[6] ?? "1"),
-      repeatability: parseScore(cells[7] ?? "1"),
-      unlock: parseScore(cells[8] ?? "1"),
-      posture: cells[10] ?? "",
-      notes: cells[11] ?? "",
-    });
-  }
-
-  return rows.sort((a, b) => totalScore(b) - totalScore(a) || a.project.localeCompare(b.project));
-}
-
-function escapeTableCell(value: string) {
-  return value.replace(/\|/g, "/").replace(/\r?\n/g, " ").trim();
-}
-
-function buildPriorityMarkdown(projects: PriorityProject[], decisionNote: string) {
-  const ranked = [...projects]
-    .map((project) => ({ ...project, total: totalScore(project) }))
-    .sort((a, b) => b.total - a.total || a.project.localeCompare(b.project));
-  const today = new Date().toISOString().slice(0, 10);
-  const rows = ranked.map((project, index) =>
-    [
-      index + 1,
-      escapeTableCell(project.project),
-      clampScore(project.strategic),
-      clampScore(project.revenue),
-      clampScore(project.readiness),
-      clampScore(project.speed),
-      clampScore(project.costSafety),
-      clampScore(project.repeatability),
-      clampScore(project.unlock),
-      project.total,
-      escapeTableCell(project.posture),
-      escapeTableCell(project.notes),
-    ].join(" | "),
-  );
-
-  return `# Project Prioritization Register
-
-Last updated: ${today}
-Owner: Ian / Codex co-pilot
-Purpose: keep one live, editable view of all candidate projects and the scoring matrix used to decide what to do next.
-
-## Scoring Criteria
-
-| Criterion | Question |
-| --- | --- |
-${SCORING_CRITERIA.map(([criterion, question]) => `| ${criterion} | ${question} |`).join("\n")}
-
-## Current Scores
-
-| Rank | Project | Strategic | Revenue | Readiness | Speed | Cost Safety | Repeatability | Unlock | Total | Recommended Posture | Notes |
-| ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
-${rows.map((row) => `| ${row} |`).join("\n")}
-
-## Current Decision
-
-${decisionNote.trim() || "No current decision recorded."}
-
-## Change Log
-
-| Date | Change | Reason |
-| --- | --- | --- |
-| ${today} | Scores updated in the Priorities page. | See document revision history for prior versions. |
-`;
-}
-
-function parseCurrentDecision(markdown: string) {
-  const lines = markdown.split(/\r?\n/);
-  const headingIndex = lines.findIndex((line) => line.trim().toLowerCase() === "## current decision");
-  if (headingIndex === -1) return "";
-  const body: string[] = [];
-  for (let i = headingIndex + 1; i < lines.length; i += 1) {
-    const line = lines[i] ?? "";
-    if (line.trim().startsWith("## ")) break;
-    body.push(line);
-  }
-  return body.join("\n").trim();
-}
-
-function newProject(): PriorityProject {
-  return {
-    id: `new-${Date.now()}`,
-    project: "New Project",
-    strategic: 3,
-    revenue: 3,
-    readiness: 3,
-    speed: 3,
-    costSafety: 3,
-    repeatability: 3,
-    unlock: 3,
-    posture: "Candidate",
-    notes: "",
-  };
-}
+import {
+  REGISTER_DOCUMENT_KEY,
+  REGISTER_TITLE,
+  SCORE_FIELDS,
+  SCORE_LABELS,
+  SCORING_CRITERIA,
+  buildPriorityMarkdown,
+  clampScore,
+  frontForProject,
+  newPriorityProject,
+  parseCurrentDecision,
+  parsePriorityProjects,
+  rankPriorityProjects,
+  totalScore,
+  type PriorityProject,
+} from "@/lib/priorities";
 
 export function Priorities() {
   const { selectedCompanyId, selectedCompany } = useCompany();
@@ -288,7 +110,7 @@ export function Priorities() {
   });
 
   const rankedProjects = useMemo(
-    () => [...projects].sort((a, b) => totalScore(b) - totalScore(a) || a.project.localeCompare(b.project)),
+    () => rankPriorityProjects(projects),
     [projects],
   );
 
@@ -355,6 +177,27 @@ export function Priorities() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <section className="min-w-0 space-y-4">
+          {!rawMode ? (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {rankedProjects.slice(0, 4).map((project, index) => {
+                const front = frontForProject(project.project);
+                return (
+                  <div key={project.id} className="border border-border p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-xs text-muted-foreground">Rank {index + 1}</div>
+                        <div className="mt-1 text-sm font-semibold">{project.project}</div>
+                      </div>
+                      <div className="text-lg font-semibold">{totalScore(project)}</div>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">{front?.stage ?? project.posture}</div>
+                    <div className="mt-2 text-xs">{front?.nextMilestone ?? project.notes}</div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
           {rawMode ? (
             <Textarea
               value={rawBody}
@@ -364,11 +207,13 @@ export function Priorities() {
           ) : (
             <>
               <div className="overflow-x-auto border border-border">
-                <table className="w-full min-w-[1100px] border-collapse text-sm">
+                <table className="w-full min-w-[1380px] border-collapse text-sm">
                   <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                     <tr>
                       <th className="px-3 py-2 text-left font-medium">Rank</th>
                       <th className="px-3 py-2 text-left font-medium">Project</th>
+                      <th className="px-3 py-2 text-left font-medium">Stage</th>
+                      <th className="px-3 py-2 text-left font-medium">Front</th>
                       {SCORE_FIELDS.map((field) => (
                         <th key={field} className="px-2 py-2 text-center font-medium">{SCORE_LABELS[field]}</th>
                       ))}
@@ -378,51 +223,69 @@ export function Priorities() {
                     </tr>
                   </thead>
                   <tbody>
-                    {rankedProjects.map((project, index) => (
-                      <tr key={project.id} className="border-t border-border align-top">
-                        <td className="px-3 py-2 text-muted-foreground">{index + 1}</td>
-                        <td className="px-3 py-2">
-                          <Input
-                            value={project.project}
-                            onChange={(event) => updateProject(project.id, { project: event.target.value })}
-                            className="h-8 min-w-[210px]"
-                          />
-                        </td>
-                        {SCORE_FIELDS.map((field) => (
-                          <td key={field} className="px-2 py-2">
+                    {rankedProjects.map((project, index) => {
+                      const front = frontForProject(project.project);
+                      return (
+                        <tr key={project.id} className="border-t border-border align-top">
+                          <td className="px-3 py-2 text-muted-foreground">{index + 1}</td>
+                          <td className="px-3 py-2">
                             <Input
-                              type="number"
-                              min={1}
-                              max={5}
-                              value={project[field]}
-                              onChange={(event) => updateProject(project.id, { [field]: clampScore(Number(event.target.value)) })}
-                              className="h-8 w-16 text-center"
+                              value={project.project}
+                              onChange={(event) => updateProject(project.id, { project: event.target.value })}
+                              className="h-8 min-w-[210px]"
                             />
                           </td>
-                        ))}
-                        <td className="px-3 py-2 text-center font-semibold">{totalScore(project)}</td>
-                        <td className="px-3 py-2">
-                          <Input
-                            value={project.posture}
-                            onChange={(event) => updateProject(project.id, { posture: event.target.value })}
-                            className="h-8 min-w-[150px]"
-                          />
-                        </td>
-                        <td className="px-3 py-2">
-                          <Input
-                            value={project.notes}
-                            onChange={(event) => updateProject(project.id, { notes: event.target.value })}
-                            className="h-8 min-w-[260px]"
-                          />
-                        </td>
-                      </tr>
-                    ))}
+                          <td className="px-3 py-2">
+                            <span className="inline-flex min-w-[120px] items-center border border-border px-2 py-1 text-xs">
+                              {front?.stage ?? "Unmapped"}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2">
+                            {front ? (
+                              <a className="text-xs text-primary hover:underline" href={`/${selectedCompany?.issuePrefix ?? "IAN"}/issues/${front.issueIdentifier}`}>
+                                {front.issueIdentifier}
+                              </a>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">No front</span>
+                            )}
+                            <div className="mt-1 max-w-[260px] text-xs text-muted-foreground">{front?.nextMilestone}</div>
+                          </td>
+                          {SCORE_FIELDS.map((field) => (
+                            <td key={field} className="px-2 py-2">
+                              <Input
+                                type="number"
+                                min={1}
+                                max={5}
+                                value={project[field]}
+                                onChange={(event) => updateProject(project.id, { [field]: clampScore(Number(event.target.value)) })}
+                                className="h-8 w-16 text-center"
+                              />
+                            </td>
+                          ))}
+                          <td className="px-3 py-2 text-center font-semibold">{totalScore(project)}</td>
+                          <td className="px-3 py-2">
+                            <Input
+                              value={project.posture}
+                              onChange={(event) => updateProject(project.id, { posture: event.target.value })}
+                              className="h-8 min-w-[150px]"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <Input
+                              value={project.notes}
+                              onChange={(event) => updateProject(project.id, { notes: event.target.value })}
+                              className="h-8 min-w-[260px]"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
 
               <div className="flex items-center justify-between gap-3">
-                <Button variant="outline" size="sm" onClick={() => setProjects((current) => [...current, newProject()])}>
+                <Button variant="outline" size="sm" onClick={() => setProjects((current) => [...current, newPriorityProject()])}>
                   <Plus className="h-4 w-4" />
                   Add Project
                 </Button>
