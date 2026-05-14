@@ -3,6 +3,7 @@ import {
   CircleDot,
   Target,
   LayoutDashboard,
+  ListChecks,
   DollarSign,
   History,
   Search,
@@ -12,6 +13,7 @@ import {
   Repeat,
   GitBranch,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { NavLink } from "@/lib/router";
@@ -81,6 +83,7 @@ export function Sidebar() {
             <span className="truncate">New Issue</span>
           </button>
           <SidebarNavItem to="/dashboard" label="Dashboard" icon={LayoutDashboard} liveCount={liveRunCount} />
+          <SidebarNavItem to="/priorities" label="Priorities" icon={ListChecks} />
           <SidebarNavItem
             to="/inbox"
             label="Inbox"
@@ -88,6 +91,12 @@ export function Sidebar() {
             badge={inboxBadge.inbox}
             badgeTone={inboxBadge.failedRuns > 0 ? "danger" : "default"}
             alert={inboxBadge.failedRuns > 0}
+          />
+          <SidebarNavItem
+            to="/approvals/pending"
+            label="Ian Approval"
+            icon={ShieldCheck}
+            badge={inboxBadge.approvals}
           />
           <PluginSlotOutlet
             slotTypes={["sidebar"]}
