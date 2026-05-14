@@ -41,7 +41,7 @@ export function Priorities() {
   const [rawBody, setRawBody] = useState("");
 
   useEffect(() => {
-    setBreadcrumbs([{ label: "Priorities" }]);
+    setBreadcrumbs([{ label: "Ian Priorities" }]);
   }, [setBreadcrumbs]);
 
   const registerQuery = useQuery({
@@ -159,7 +159,7 @@ export function Priorities() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-normal">Priorities</h1>
+          <h1 className="text-2xl font-semibold tracking-normal">Ian Priorities</h1>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
             Live project scoring, fulfillment fit, and recommended attention for {selectedCompany?.name ?? "this company"}. Saves update the Paperclip document and preserve revision history.
           </p>

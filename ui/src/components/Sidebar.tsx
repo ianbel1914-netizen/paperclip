@@ -83,7 +83,7 @@ export function Sidebar() {
             <span className="truncate">New Issue</span>
           </button>
           <SidebarNavItem to="/dashboard" label="Dashboard" icon={LayoutDashboard} liveCount={liveRunCount} />
-          <SidebarNavItem to="/priorities" label="Priorities" icon={ListChecks} />
+          <SidebarNavItem to="/priorities" label="Ian Priorities" icon={ListChecks} />
           <SidebarNavItem
             to="/inbox"
             label="Inbox"
