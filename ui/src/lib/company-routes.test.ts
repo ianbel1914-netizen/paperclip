@@ -35,4 +35,11 @@ describe("company routes", () => {
     expect(applyCompanyPrefix("/search?q=hello%20world", "PAP")).toBe("/PAP/search?q=hello%20world");
     expect(toCompanyRelativePath("/PAP/search?q=foo")).toBe("/search?q=foo");
   });
+
+  it("treats /priorities as a board route that needs a company prefix", () => {
+    expect(isBoardPathWithoutPrefix("/priorities")).toBe(true);
+    expect(extractCompanyPrefixFromPath("/priorities")).toBeNull();
+    expect(applyCompanyPrefix("/priorities", "IAN")).toBe("/IAN/priorities");
+    expect(toCompanyRelativePath("/IAN/priorities")).toBe("/priorities");
+  });
 });
