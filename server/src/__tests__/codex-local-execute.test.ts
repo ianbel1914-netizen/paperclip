@@ -42,6 +42,25 @@ process.exit(1);
   await fs.chmod(commandPath, 0o755);
 }
 
+async function writeFakeCodexCommandForCurrentPlatform(root: string, baseName = "codex"): Promise<string> {
+  if (process.platform !== "win32") {
+    const commandPath = path.join(root, baseName);
+    await writeFakeCodexCommand(commandPath);
+    return commandPath;
+  }
+
+  const nodeScriptPath = path.join(root, `${baseName}.js`);
+  const commandPath = path.join(root, `${baseName}.cmd`);
+  await writeFakeCodexCommand(nodeScriptPath);
+  const wrapper = [
+    "@echo off",
+    `node "%~dp0${baseName}.js" %*`,
+    "",
+  ].join("\r\n");
+  await fs.writeFile(commandPath, wrapper, "utf8");
+  return commandPath;
+}
+
 type CapturePayload = {
   argv: string[];
   prompt: string;
@@ -93,6 +112,131 @@ function createLocalSandboxRunner() {
 }
 
 describe("codex execute", () => {
+  it("points local Codex agents at the loopback Paperclip API by default", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-codex-local-api-url-"));
+    const workspace = path.join(root, "workspace");
+    const capturePath = path.join(root, "capture.json");
+    await fs.mkdir(workspace, { recursive: true });
+    const commandPath = await writeFakeCodexCommandForCurrentPlatform(root);
+
+    const previousRuntimeApiUrl = process.env.PAPERCLIP_RUNTIME_API_URL;
+    const previousPaperclipApiUrl = process.env.PAPERCLIP_API_URL;
+    const previousLocalAdapterApiUrl = process.env.PAPERCLIP_LOCAL_ADAPTER_API_URL;
+    const previousListenHost = process.env.PAPERCLIP_LISTEN_HOST;
+    const previousListenPort = process.env.PAPERCLIP_LISTEN_PORT;
+
+    try {
+      process.env.PAPERCLIP_RUNTIME_API_URL = "http://100.96.44.4:3101";
+      process.env.PAPERCLIP_API_URL = "https://ians-mac-mini-1.tail403c1a.ts.net";
+      delete process.env.PAPERCLIP_LOCAL_ADAPTER_API_URL;
+      process.env.PAPERCLIP_LISTEN_HOST = "0.0.0.0";
+      process.env.PAPERCLIP_LISTEN_PORT = "3101";
+
+      const result = await execute({
+        runId: "run-1",
+        agent: {
+          id: "agent-1",
+          companyId: "company-1",
+          name: "Codex Coder",
+          adapterType: "codex_local",
+          adapterConfig: {},
+        },
+        runtime: {
+          sessionId: null,
+          sessionParams: null,
+          sessionDisplayId: null,
+          taskKey: null,
+        },
+        config: {
+          command: commandPath,
+          cwd: workspace,
+          env: {
+            PAPERCLIP_TEST_CAPTURE_PATH: capturePath,
+          },
+          promptTemplate: "Follow the paperclip heartbeat.",
+        },
+        context: {},
+        authToken: "run-jwt-token",
+        onLog: async () => {},
+      });
+
+      expect(result.exitCode).toBe(0);
+      const capture = JSON.parse(await fs.readFile(capturePath, "utf8")) as CapturePayload;
+      expect(capture.paperclipApiUrl).toBe("http://127.0.0.1:3101");
+    } finally {
+      if (previousRuntimeApiUrl === undefined) delete process.env.PAPERCLIP_RUNTIME_API_URL;
+      else process.env.PAPERCLIP_RUNTIME_API_URL = previousRuntimeApiUrl;
+      if (previousPaperclipApiUrl === undefined) delete process.env.PAPERCLIP_API_URL;
+      else process.env.PAPERCLIP_API_URL = previousPaperclipApiUrl;
+      if (previousLocalAdapterApiUrl === undefined) delete process.env.PAPERCLIP_LOCAL_ADAPTER_API_URL;
+      else process.env.PAPERCLIP_LOCAL_ADAPTER_API_URL = previousLocalAdapterApiUrl;
+      if (previousListenHost === undefined) delete process.env.PAPERCLIP_LISTEN_HOST;
+      else process.env.PAPERCLIP_LISTEN_HOST = previousListenHost;
+      if (previousListenPort === undefined) delete process.env.PAPERCLIP_LISTEN_PORT;
+      else process.env.PAPERCLIP_LISTEN_PORT = previousListenPort;
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves an explicit Codex adapter Paperclip API URL", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-codex-explicit-api-url-"));
+    const workspace = path.join(root, "workspace");
+    const capturePath = path.join(root, "capture.json");
+    await fs.mkdir(workspace, { recursive: true });
+    const commandPath = await writeFakeCodexCommandForCurrentPlatform(root);
+
+    const previousRuntimeApiUrl = process.env.PAPERCLIP_RUNTIME_API_URL;
+    const previousListenHost = process.env.PAPERCLIP_LISTEN_HOST;
+    const previousListenPort = process.env.PAPERCLIP_LISTEN_PORT;
+
+    try {
+      process.env.PAPERCLIP_RUNTIME_API_URL = "http://100.96.44.4:3101";
+      process.env.PAPERCLIP_LISTEN_HOST = "0.0.0.0";
+      process.env.PAPERCLIP_LISTEN_PORT = "3101";
+
+      const result = await execute({
+        runId: "run-1",
+        agent: {
+          id: "agent-1",
+          companyId: "company-1",
+          name: "Codex Coder",
+          adapterType: "codex_local",
+          adapterConfig: {},
+        },
+        runtime: {
+          sessionId: null,
+          sessionParams: null,
+          sessionDisplayId: null,
+          taskKey: null,
+        },
+        config: {
+          command: commandPath,
+          cwd: workspace,
+          env: {
+            PAPERCLIP_API_URL: "http://adapter-specific.example.test:3101",
+            PAPERCLIP_TEST_CAPTURE_PATH: capturePath,
+          },
+          promptTemplate: "Follow the paperclip heartbeat.",
+        },
+        context: {},
+        authToken: "run-jwt-token",
+        onLog: async () => {},
+      });
+
+      expect(result.exitCode).toBe(0);
+      const capture = JSON.parse(await fs.readFile(capturePath, "utf8")) as CapturePayload;
+      expect(capture.paperclipApiUrl).toBe("http://adapter-specific.example.test:3101");
+    } finally {
+      if (previousRuntimeApiUrl === undefined) delete process.env.PAPERCLIP_RUNTIME_API_URL;
+      else process.env.PAPERCLIP_RUNTIME_API_URL = previousRuntimeApiUrl;
+      if (previousListenHost === undefined) delete process.env.PAPERCLIP_LISTEN_HOST;
+      else process.env.PAPERCLIP_LISTEN_HOST = previousListenHost;
+      if (previousListenPort === undefined) delete process.env.PAPERCLIP_LISTEN_PORT;
+      else process.env.PAPERCLIP_LISTEN_PORT = previousListenPort;
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("uses a Paperclip-managed CODEX_HOME outside worktree mode while preserving shared auth and config", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-codex-execute-default-"));
     const workspace = path.join(root, "workspace");

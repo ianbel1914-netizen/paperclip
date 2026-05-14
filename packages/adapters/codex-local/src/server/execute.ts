@@ -28,6 +28,7 @@ import {
   ensurePaperclipSkillSymlink,
   ensurePathInEnv,
   refreshPaperclipWorkspaceEnvForExecution,
+  resolvePaperclipLocalAdapterApiUrl,
   readPaperclipRuntimeSkillEntries,
   readPaperclipIssueWorkModeFromContext,
   resolvePaperclipDesiredSkillNames,
@@ -471,6 +472,14 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   }
   if (runtimePrimaryUrl) {
     env.PAPERCLIP_RUNTIME_PRIMARY_URL = runtimePrimaryUrl;
+  }
+  const hasExplicitPaperclipApiUrl =
+    typeof envConfig.PAPERCLIP_API_URL === "string" && envConfig.PAPERCLIP_API_URL.trim().length > 0;
+  if (!executionTargetIsRemote && !hasExplicitPaperclipApiUrl) {
+    const localAdapterApiUrl = resolvePaperclipLocalAdapterApiUrl();
+    if (localAdapterApiUrl) {
+      env.PAPERCLIP_API_URL = localAdapterApiUrl;
+    }
   }
   env.CODEX_HOME = remoteCodexHome ?? effectiveCodexHome;
   if (!hasExplicitApiKey && authToken) {

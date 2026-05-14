@@ -891,6 +891,37 @@ export function buildPaperclipEnv(agent: { id: string; companyId: string }): Rec
   return vars;
 }
 
+export function resolvePaperclipLocalAdapterApiUrl(env: NodeJS.ProcessEnv = process.env): string | null {
+  const explicitLocalUrl =
+    env.PAPERCLIP_LOCAL_ADAPTER_API_URL?.trim() ||
+    env.PAPERCLIP_LOCAL_API_URL?.trim();
+  if (explicitLocalUrl) {
+    try {
+      return new URL(explicitLocalUrl).origin;
+    } catch {
+      return null;
+    }
+  }
+
+  const port = env.PAPERCLIP_LISTEN_PORT?.trim() || env.PORT?.trim();
+  if (!port) return null;
+
+  const rawHost = env.PAPERCLIP_LISTEN_HOST?.trim() || env.HOST?.trim() || "127.0.0.1";
+  const localHost =
+    !rawHost ||
+    rawHost === "0.0.0.0" ||
+    rawHost === "::" ||
+    rawHost.toLowerCase() === "localhost"
+      ? "127.0.0.1"
+      : rawHost;
+  const formattedHost =
+    localHost.includes(":") && !localHost.startsWith("[") && !localHost.endsWith("]")
+      ? `[${localHost}]`
+      : localHost;
+
+  return `http://${formattedHost}:${port}`;
+}
+
 export function applyPaperclipWorkspaceEnv(
   env: Record<string, string>,
   input: {

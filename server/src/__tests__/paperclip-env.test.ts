@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { buildPaperclipEnv } from "../adapters/utils.js";
+import { buildPaperclipEnv, resolvePaperclipLocalAdapterApiUrl } from "../adapters/utils.js";
 
 const ORIGINAL_PAPERCLIP_RUNTIME_API_URL = process.env.PAPERCLIP_RUNTIME_API_URL;
 const ORIGINAL_PAPERCLIP_API_URL = process.env.PAPERCLIP_API_URL;
+const ORIGINAL_PAPERCLIP_LOCAL_ADAPTER_API_URL = process.env.PAPERCLIP_LOCAL_ADAPTER_API_URL;
+const ORIGINAL_PAPERCLIP_LOCAL_API_URL = process.env.PAPERCLIP_LOCAL_API_URL;
 const ORIGINAL_PAPERCLIP_LISTEN_HOST = process.env.PAPERCLIP_LISTEN_HOST;
 const ORIGINAL_PAPERCLIP_LISTEN_PORT = process.env.PAPERCLIP_LISTEN_PORT;
 const ORIGINAL_HOST = process.env.HOST;
@@ -14,6 +16,12 @@ afterEach(() => {
 
   if (ORIGINAL_PAPERCLIP_API_URL === undefined) delete process.env.PAPERCLIP_API_URL;
   else process.env.PAPERCLIP_API_URL = ORIGINAL_PAPERCLIP_API_URL;
+
+  if (ORIGINAL_PAPERCLIP_LOCAL_ADAPTER_API_URL === undefined) delete process.env.PAPERCLIP_LOCAL_ADAPTER_API_URL;
+  else process.env.PAPERCLIP_LOCAL_ADAPTER_API_URL = ORIGINAL_PAPERCLIP_LOCAL_ADAPTER_API_URL;
+
+  if (ORIGINAL_PAPERCLIP_LOCAL_API_URL === undefined) delete process.env.PAPERCLIP_LOCAL_API_URL;
+  else process.env.PAPERCLIP_LOCAL_API_URL = ORIGINAL_PAPERCLIP_LOCAL_API_URL;
 
   if (ORIGINAL_PAPERCLIP_LISTEN_HOST === undefined) delete process.env.PAPERCLIP_LISTEN_HOST;
   else process.env.PAPERCLIP_LISTEN_HOST = ORIGINAL_PAPERCLIP_LISTEN_HOST;
@@ -72,5 +80,28 @@ describe("buildPaperclipEnv", () => {
     const env = buildPaperclipEnv({ id: "agent-1", companyId: "company-1" });
 
     expect(env.PAPERCLIP_API_URL).toBe("http://[::1]:3101");
+  });
+});
+
+describe("resolvePaperclipLocalAdapterApiUrl", () => {
+  it("uses a dedicated local adapter override when present", () => {
+    process.env.PAPERCLIP_LOCAL_ADAPTER_API_URL = "http://127.0.0.1:3999/base/path";
+    process.env.PAPERCLIP_LISTEN_HOST = "0.0.0.0";
+    process.env.PAPERCLIP_LISTEN_PORT = "3101";
+
+    expect(resolvePaperclipLocalAdapterApiUrl()).toBe("http://127.0.0.1:3999");
+  });
+
+  it("uses loopback for wildcard or localhost binds", () => {
+    delete process.env.PAPERCLIP_LOCAL_ADAPTER_API_URL;
+    delete process.env.PAPERCLIP_LOCAL_API_URL;
+    process.env.PAPERCLIP_LISTEN_HOST = "0.0.0.0";
+    process.env.PAPERCLIP_LISTEN_PORT = "3101";
+
+    expect(resolvePaperclipLocalAdapterApiUrl()).toBe("http://127.0.0.1:3101");
+
+    process.env.PAPERCLIP_LISTEN_HOST = "localhost";
+
+    expect(resolvePaperclipLocalAdapterApiUrl()).toBe("http://127.0.0.1:3101");
   });
 });
