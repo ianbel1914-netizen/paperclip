@@ -159,3 +159,32 @@ Expected behavior:
 
 This keeps the mobile experience conversational while preserving the Paperclip audit trail.
 
+## Codex Wake Shortcut - 2026-05-14
+
+The live Telegram runtime supports a dedicated Codex wake lane.
+
+User syntax:
+
+```text
+cx <request for Codex>
+codex <request for Codex>
+codex wake <request for Codex>
+```
+
+Expected behavior:
+
+- Creates a Paperclip issue titled `Codex Wake: ...`.
+- Sets the issue to `todo` without unpausing CEO/CTO/Coder agents or routines.
+- Adds a context comment with Telegram chat/message ids, optional reply context, and Codex pickup instructions.
+- Sends a concise Telegram confirmation with the issue link.
+- Maps the confirmation message as the Telegram thread anchor.
+- Replies to the confirmation continue back into the same Paperclip issue as comments.
+
+Purpose:
+
+`cx` is for Ian to route something directly to Codex as his copilot, separate from normal CoS brain dumps and `pc` Paperclip commands.
+
+Operational rule:
+
+Codex should search for open `Codex Wake:` issues before resuming from Telegram-driven work, read the issue comments first, then continue from the latest context. Codex should not interpret `cx` as approval to unpause agents, enable routines, or spend premium model tokens.
+
