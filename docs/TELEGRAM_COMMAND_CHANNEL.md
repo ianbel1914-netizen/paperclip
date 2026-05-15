@@ -188,3 +188,18 @@ Operational rule:
 
 Codex should search for open `Codex Wake:` issues before resuming from Telegram-driven work, read the issue comments first, then continue from the latest context. Codex should not interpret `cx` as approval to unpause agents, enable routines, or spend premium model tokens.
 
+## Codex Wake Reply Fallback - 2026-05-15
+
+Observed issue: replying to a `Codex wake queued` Telegram confirmation could fall through to normal CoS question handling and trigger the local Ollama responder.
+
+Live runtime fix:
+
+- If a Telegram reply targets a bot message whose text includes `Codex wake queued`, the plugin extracts the visible Paperclip issue id such as `IAN-106`.
+- It finds that issue in the current company.
+- It writes Ian's reply as a comment on that issue.
+- It sends a short acknowledgement: `Got it. I added that context to the Codex Wake thread.`
+- It records the Telegram message mapping so later replies stay attached.
+- It returns early so the local Ollama responder does not answer the reply as a fresh CoS question.
+
+This fallback protects the intended `cx` workflow even if the primary Telegram message-id mapping is missing.
+
