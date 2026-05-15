@@ -203,3 +203,29 @@ Live runtime fix:
 
 This fallback protects the intended `cx` workflow even if the primary Telegram message-id mapping is missing.
 
+## Codex Frontline CoS Routing - 2026-05-15
+
+The live Telegram runtime now treats Codex-level intelligence as the preferred top-line CoS lane for substantive messages.
+
+Routing behavior:
+
+- `pc ...` remains deterministic Paperclip command routing.
+- `cx ...`, `codex ...`, and `codex wake ...` remain explicit Codex Wake overrides.
+- Very short acknowledgements such as `ok`, `got it`, `thanks`, and `done` are ignored as trivial.
+- Plain questions are routed to `CoS Conversation: ...` issues for Codex-level handling.
+- Long or substantive plain messages are routed to Codex when they mention Paperclip, Codex, agents, architecture, roadmap, priorities, strategy, build/fix/review, workflows, revenue, ventures, real estate, or Telegram.
+- Lower-stakes notes still go to the CoS Inbox / parking lot flow.
+
+Implementation details:
+
+- The runtime resolves the Codex Engineer agent, preferring `4e6af8a9-cc2a-4003-bdad-48cd64fd8feb` and falling back to any `codex_local` agent.
+- It creates a `CoS Conversation: ...` Paperclip issue with Telegram context and Codex pickup instructions.
+- It assigns the issue to the Codex Engineer when available.
+- It attempts `ctx.agents.invoke(...)` with reason `telegram-cos-frontline`.
+- If invocation is blocked by Paperclip agent gates, the issue remains queued with context preserved.
+- The Telegram confirmation is mapped back to the issue so replies keep adding context.
+
+Important boundary:
+
+This does not unpause CEO/CTO/Coder agents, does not enable routines, and does not add Claude/premium fallback. It promotes the communication layer to Codex where Paperclip permits it, while keeping Paperclip as the audit trail.
+
