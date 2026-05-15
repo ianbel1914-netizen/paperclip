@@ -16,6 +16,7 @@ import {
   heartbeatRunWatchdogDecisions,
   heartbeatRuns,
   issueApprovals,
+  issueComments,
   issueRelations,
   issueThreadInteractions,
   issues,
@@ -60,6 +61,7 @@ const UNSUCCESSFUL_HEARTBEAT_RUN_TERMINAL_STATUSES = ["failed", "cancelled", "ti
 export const ACTIVE_RUN_OUTPUT_SUSPICION_THRESHOLD_MS = 60 * 60 * 1000;
 export const ACTIVE_RUN_OUTPUT_CRITICAL_THRESHOLD_MS = 4 * 60 * 60 * 1000;
 export const ACTIVE_RUN_OUTPUT_CONTINUE_REARM_MS = 30 * 60 * 1000;
+export const STALE_RUN_EVAL_RECENT_CLOSE_SUPPRESSION_MS = 2 * 60 * 60 * 1000;
 const ACTIVE_RUN_OUTPUT_EVIDENCE_TAIL_BYTES = 8 * 1024;
 const STRANDED_ISSUE_RECOVERY_ORIGIN_KIND = RECOVERY_ORIGIN_KINDS.strandedIssueRecovery;
 const STALE_ACTIVE_RUN_EVALUATION_ORIGIN_KIND = RECOVERY_ORIGIN_KINDS.staleActiveRunEvaluation;
@@ -688,6 +690,54 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
     return row ?? null;
   }
 
+  async function findRecentlyClosedStaleRunEvaluation(companyId: string, runId: string, since: Date) {
+    const [row] = await db
+      .select({ id: issues.id, identifier: issues.identifier, status: issues.status, updatedAt: issues.updatedAt })
+      .from(issues)
+      .where(
+        and(
+          eq(issues.companyId, companyId),
+          eq(issues.originKind, STALE_ACTIVE_RUN_EVALUATION_ORIGIN_KIND),
+          eq(issues.originId, runId),
+          isNull(issues.hiddenAt),
+          inArray(issues.status, ["done", "cancelled"]),
+          gt(issues.updatedAt, since),
+        ),
+      )
+      .orderBy(desc(issues.updatedAt))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async function hasAnyWatchdogDecisionForRun(companyId: string, runId: string) {
+    const [row] = await db
+      .select({ id: heartbeatRunWatchdogDecisions.id })
+      .from(heartbeatRunWatchdogDecisions)
+      .where(
+        and(
+          eq(heartbeatRunWatchdogDecisions.companyId, companyId),
+          eq(heartbeatRunWatchdogDecisions.runId, runId),
+        ),
+      )
+      .limit(1);
+    return row != null;
+  }
+
+  async function findAgentApiActivitySince(agentId: string, since: Date) {
+    const [row] = await db
+      .select({ id: issueComments.id, createdAt: issueComments.createdAt })
+      .from(issueComments)
+      .where(
+        and(
+          eq(issueComments.authorAgentId, agentId),
+          gt(issueComments.createdAt, since),
+        ),
+      )
+      .orderBy(desc(issueComments.createdAt))
+      .limit(1);
+    return row ?? null;
+  }
+
   async function buildRunOutputSilence(
     run: Pick<
       typeof heartbeatRuns.$inferSelect,
@@ -1030,6 +1080,26 @@ export function recoveryService(db: Db, deps: { enqueueWakeup: RecoveryWakeup })
         });
       }
       return { kind: "existing" as const, evaluationIssueId: existing.id };
+    }
+
+    const [recentlyClosed, hasWatchdogDecision] = await Promise.all([
+      findRecentlyClosedStaleRunEvaluation(
+        input.run.companyId,
+        input.run.id,
+        new Date(input.now.getTime() - ACTIVE_RUN_OUTPUT_SUSPICION_THRESHOLD_MS),
+      ),
+      hasAnyWatchdogDecisionForRun(input.run.companyId, input.run.id),
+    ]);
+    if (recentlyClosed && !hasWatchdogDecision) {
+      return { kind: "existing" as const, evaluationIssueId: recentlyClosed.id };
+    }
+
+    const silenceStartedAt = silenceStartedAtForRun(input.run);
+    if (silenceStartedAt) {
+      const apiActivity = await findAgentApiActivitySince(input.run.agentId, silenceStartedAt);
+      if (apiActivity) {
+        return { kind: "skipped" as const };
+      }
     }
 
     const ownerAgentId = await resolveStaleRunOwnerAgentId({ run: input.run, runningAgent, sourceIssue });

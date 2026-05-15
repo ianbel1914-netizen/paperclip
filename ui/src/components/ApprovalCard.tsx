@@ -5,6 +5,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Identity } from "./Identity";
 import {
   approvalSubject,
+  approvalExplainer,
   typeIcon,
   defaultTypeIcon,
   ApprovalPayloadRenderer,
@@ -45,6 +46,7 @@ export function ApprovalCard({
   const Icon = typeIcon[approval.type] ?? defaultTypeIcon;
   const kindLabel = typeLabel[approval.type] ?? approval.type;
   const subject = approvalSubject(payload);
+  const explainer = approvalExplainer(approval.type, payload);
   const showResolutionButtons =
     Boolean(onApprove && onReject) &&
     approval.type !== "budget_override_required" &&
@@ -80,6 +82,9 @@ export function ApprovalCard({
                 </h3>
                 <p className="text-xs leading-5 text-muted-foreground">
                   Approval request created {timeAgo(approval.createdAt)}
+                </p>
+                <p className="max-w-3xl text-sm leading-6 text-foreground/80">
+                  {explainer}
                 </p>
               </div>
             </div>

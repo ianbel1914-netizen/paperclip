@@ -3,7 +3,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ApprovalPayloadRenderer, approvalLabel } from "./ApprovalPayload";
+import { ApprovalPayloadRenderer, approvalExplainer, approvalLabel } from "./ApprovalPayload";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -15,6 +15,24 @@ describe("approvalLabel", () => {
         title: "Reply with an ASCII frog",
       }),
     ).toBe("Board Approval: Reply with an ASCII frog");
+  });
+});
+
+describe("approvalExplainer", () => {
+  it("turns approval payload context into a plain-language reason", () => {
+    expect(
+      approvalExplainer("request_board_approval", {
+        recommendedAction: "Approve the customer outreach plan.",
+      }),
+    ).toBe(
+      "Paperclip needs your decision on this request. Recommended next step: Approve the customer outreach plan.",
+    );
+  });
+
+  it("falls back to type-specific non-technical guidance", () => {
+    expect(approvalExplainer("hire_agent", { name: "Research Lead" })).toContain(
+      "A new agent is waiting for your go-ahead",
+    );
   });
 });
 

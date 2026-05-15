@@ -63,7 +63,7 @@ vi.mock("../api/instanceSettings", () => ({
 }));
 
 vi.mock("../hooks/useInboxBadge", () => ({
-  useInboxBadge: () => ({ inbox: 0, failedRuns: 0 }),
+  useInboxBadge: () => ({ inbox: 0, approvals: 2, failedRuns: 0 }),
 }));
 
 vi.mock("@/plugins/slots", () => ({
@@ -133,6 +133,25 @@ describe("Sidebar", () => {
     expect(topSearchLink?.getAttribute("href")).toBe("/search");
     const workLinks = [...container.querySelectorAll("nav a")].map((anchor) => anchor.textContent?.trim());
     expect(workLinks).not.toContain("Search");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("shows a dedicated Ian Approval link under Inbox with the pending approval count", async () => {
+    mockInstanceSettingsApi.getExperimental.mockResolvedValue({ enableIsolatedWorkspaces: false });
+    const root = await renderSidebar();
+
+    const links = [...container.querySelectorAll("nav a")];
+    const inboxIndex = links.findIndex((anchor) => anchor.textContent?.includes("Inbox"));
+    const approvalIndex = links.findIndex((anchor) => anchor.textContent?.includes("Ian Approval"));
+    const approvalLink = links[approvalIndex];
+
+    expect(inboxIndex).toBeGreaterThanOrEqual(0);
+    expect(approvalIndex).toBe(inboxIndex + 1);
+    expect(approvalLink?.getAttribute("href")).toBe("/approvals/pending");
+    expect(approvalLink?.textContent).toContain("2");
 
     await act(async () => {
       root.unmount();

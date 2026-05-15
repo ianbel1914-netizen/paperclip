@@ -7,6 +7,7 @@ import {
   createDb,
   heartbeatRunWatchdogDecisions,
   heartbeatRuns,
+  issueComments,
   issueRelations,
   issues,
 } from "@paperclipai/db";
@@ -546,5 +547,66 @@ describeEmbeddedPostgres("active-run output watchdog", () => {
       createdByRunId: randomUUID(),
     });
     expect(decision.createdByRunId).toBe(managerRunId);
+  });
+
+  it("suppresses repeat alerts within the grace window after evaluation is marked done", async () => {
+    const now = new Date("2026-04-22T20:00:00.000Z");
+    const { companyId } = await seedRunningRun({
+      now,
+      ageMs: ACTIVE_RUN_OUTPUT_SUSPICION_THRESHOLD_MS + 60_000,
+    });
+    const heartbeat = heartbeatService(db);
+
+    const first = await heartbeat.scanSilentActiveRuns({ now, companyId });
+    expect(first.created).toBe(1);
+    const evaluationIssueId = first.evaluationIssueIds[0];
+    expect(evaluationIssueId).toBeTruthy();
+
+    await db.update(issues).set({ status: "done" }).where(eq(issues.id, evaluationIssueId));
+
+    const second = await heartbeat.scanSilentActiveRuns({ now, companyId });
+    expect(second.created).toBe(0);
+    expect(second.existing).toBe(1);
+
+    const third = await heartbeat.scanSilentActiveRuns({ now, companyId });
+    expect(third.created).toBe(0);
+    expect(third.existing).toBe(1);
+
+    const allEvaluations = await db
+      .select()
+      .from(issues)
+      .where(and(eq(issues.companyId, companyId), eq(issues.originKind, "stale_active_run_evaluation")));
+    expect(allEvaluations).toHaveLength(1);
+  });
+
+  it("skips runs where the agent has posted API comments since stdout went silent", async () => {
+    const now = new Date("2026-04-22T20:00:00.000Z");
+    const { companyId, coderId, issueId } = await seedRunningRun({
+      now,
+      ageMs: ACTIVE_RUN_OUTPUT_SUSPICION_THRESHOLD_MS + 60_000,
+    });
+    const heartbeat = heartbeatService(db);
+
+    await db.insert(issueComments).values({
+      companyId,
+      issueId,
+      authorAgentId: coderId,
+      authorType: "agent",
+      body: "Still working — posting API update.",
+      createdAt: new Date(now.getTime() - 5 * 60 * 1000),
+      updatedAt: new Date(now.getTime() - 5 * 60 * 1000),
+    });
+
+    const result = await heartbeat.scanSilentActiveRuns({ now, companyId });
+
+    expect(result.scanned).toBe(1);
+    expect(result.created).toBe(0);
+    expect(result.skipped).toBe(1);
+
+    const evaluations = await db
+      .select()
+      .from(issues)
+      .where(and(eq(issues.companyId, companyId), eq(issues.originKind, "stale_active_run_evaluation")));
+    expect(evaluations).toHaveLength(0);
   });
 });

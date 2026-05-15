@@ -36,6 +36,33 @@ export function approvalLabel(type: string, payload?: Record<string, unknown> | 
   return base;
 }
 
+export function approvalExplainer(type: string, payload?: Record<string, unknown> | null): string {
+  const recommendedAction = firstNonEmptyString(payload?.recommendedAction);
+  const nextActionOnApproval = firstNonEmptyString(payload?.nextActionOnApproval);
+
+  if (recommendedAction) {
+    return `Paperclip needs your decision on this request. Recommended next step: ${recommendedAction}`;
+  }
+
+  if (nextActionOnApproval) {
+    return `Approving this lets the team continue with this next step: ${nextActionOnApproval}`;
+  }
+
+  if (type === "hire_agent") {
+    return "A new agent is waiting for your go-ahead before Paperclip can activate it and let it start work.";
+  }
+
+  if (type === "budget_override_required") {
+    return "This asks to go beyond the current spending guardrail. Review the scope and amount before allowing more spend.";
+  }
+
+  if (type === "approve_ceo_strategy") {
+    return "A plan or strategy needs your yes-or-no decision before the team moves forward.";
+  }
+
+  return "An agent needs your approval before it can continue. Open the details if you want more context first.";
+}
+
 export const typeIcon: Record<string, typeof UserPlus> = {
   hire_agent: UserPlus,
   approve_ceo_strategy: Lightbulb,
