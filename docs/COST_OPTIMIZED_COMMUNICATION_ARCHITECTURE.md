@@ -85,7 +85,7 @@ Hard rules for the first live version:
 
 - Always-on Telegram listener is allowed.
 - Deterministic routing is allowed.
-- Codex Engineer wake-on-demand is the target state for Ian's normal CoS conversation, but remains disabled until the `codex_local` API callback path is fixed.
+- Codex Engineer wake-on-demand is the target state for Ian's normal CoS conversation, but remains disabled until the explicit oversight path is gated tightly enough for cost control.
 - Codex scheduled heartbeats/routines remain disabled.
 - Max one Codex CoS run at a time.
 - Track Codex CoS routed messages, invoked runs, and estimated prompt tokens.
@@ -161,9 +161,12 @@ As of 2026-05-15:
 - Visible replies should be natural acknowledgements, not internal routing receipts.
 - `pc ...` remains the deterministic command namespace.
 - `cx ...` and `codex wake ...` remain explicit manual wake shortcuts.
-- A live test proved the Telegram route can wake Codex, but also exposed a cost risk: the `codex_local` runtime could not reach the Paperclip API callback URL from its sandbox and started continuation runs trying to post back.
+- A live test proved the Telegram route can wake Codex.
+- The first test exposed a callback failure: sandboxed `codex_local` could not reach loopback or resolve the Tailscale hostname.
+- The practical callback fix was verified: configure the Codex Engineer with explicit `PAPERCLIP_API_URL=https://ians-mac-mini-1.tail403c1a.ts.net` and run it with `dangerouslyBypassApprovalsAndSandbox=true`. With that setting, Codex reached Paperclip, read issue comments, posted a reply, and marked the issue done.
+- Cost finding: even successful CoS runs can carry very large context, so the live route must remain gated.
 - Current safe state: Codex Engineer is `idle` with `heartbeat.enabled=false` and `heartbeat.wakeOnDemand=false`.
-- Next required build step: fix the `codex_local` runtime API callback path before re-enabling Telegram-to-Codex live answers.
+- Next required build step: create the separate Codex Oversight Bot / explicit command path, with budget checks and narrow prompts, before re-enabling Telegram-to-Codex live answers.
 
 ## Success Criteria
 
