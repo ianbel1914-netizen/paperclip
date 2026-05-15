@@ -255,3 +255,23 @@ pc bandwidth
 
 Important limitation: this is a communication-layer bandwidth meter, not an authoritative OpenAI billing meter. It measures how much content the CoS layer is routing toward Codex and whether Paperclip accepted an invoke. True provider token/cost accounting should still come from the Codex/OpenAI quota and billing integrations once available.
 
+## Default Codex Conversation - 2026-05-15
+
+Updated behavior: Ian should not need to type `cx` for ordinary conversation.
+
+Current intent:
+
+- Natural-language Telegram messages are the normal Codex CoS conversation surface.
+- Writing `codex ...` is treated as natural conversation, not a wake shortcut.
+- `cx ...` remains an explicit manual shortcut for creating a `Codex Wake: ...` issue.
+- `codex wake ...` also remains an explicit wake shortcut.
+- `pc ...` remains deterministic Paperclip command routing.
+
+Example:
+
+```text
+codex are you responding to this message?
+```
+
+This should route through the Codex-frontline CoS conversation path, not create a `Codex Wake:` issue.
+
