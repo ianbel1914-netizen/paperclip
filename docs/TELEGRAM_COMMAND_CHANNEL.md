@@ -93,3 +93,25 @@ Safety boundaries:
 - It does not broaden Telegram access beyond the configured allowlist.
 - It keeps Paperclip as the system of record.
 
+## Conversation Mode Gap
+
+Current Telegram behavior is capture-first, not full natural conversation.
+
+The live runtime now provides zero-model conversational acknowledgements:
+
+- Questions receive an "I'm here" acknowledgement and become CoS Inbox question threads.
+- Brain dumps receive a captured acknowledgement and become CoS Inbox threads.
+- Replies to Telegram-created task confirmations are added as Paperclip comments and acknowledged in Telegram.
+
+This makes Telegram feel responsive without spending model tokens. It still does not generate substantive answers from a model.
+
+The next build layer is a capped responder:
+
+1. Direct question detection.
+2. Pull only the linked issue, latest few comments, and current priority summary.
+3. Generate one concise response using the cheapest approved responder route.
+4. Write the response to Paperclip and Telegram.
+5. Enforce nightly reply caps, quota gates, and no delegation unless explicitly approved.
+
+Recommended first cap: 10 model-written Telegram replies per night, with no premium-model fallback and no agent/routine unpause.
+
