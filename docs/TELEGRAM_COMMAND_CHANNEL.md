@@ -229,3 +229,29 @@ Important boundary:
 
 This does not unpause CEO/CTO/Coder agents, does not enable routines, and does not add Claude/premium fallback. It promotes the communication layer to Codex where Paperclip permits it, while keeping Paperclip as the audit trail.
 
+## Codex CoS Usage Tracking - 2026-05-15
+
+The live Telegram runtime now tracks daily Codex CoS communication bandwidth separately from general agent activity.
+
+Tracked fields, stored in plugin state under `codex-cos-usage-YYYY-MM-DD`:
+
+- `frontlineMessages`: plain Telegram messages routed to the Codex-frontline CoS lane
+- `manualWakeMessages`: explicit `cx` / `codex wake` messages
+- `invokedRuns`: messages where Paperclip accepted a Codex agent invoke
+- `queuedOnly`: messages queued as Paperclip issues without a successful invoke
+- `inputChars`: raw user-message characters
+- `promptChars`: full context prompt characters sent or queued for Codex
+- `estimatedInputTokens`: prompt character count divided by 4, rounded up
+- `updatedAt`: latest update timestamp
+
+Telegram commands:
+
+```text
+pc usage
+pc codex usage
+pc cos usage
+pc bandwidth
+```
+
+Important limitation: this is a communication-layer bandwidth meter, not an authoritative OpenAI billing meter. It measures how much content the CoS layer is routing toward Codex and whether Paperclip accepted an invoke. True provider token/cost accounting should still come from the Codex/OpenAI quota and billing integrations once available.
+
