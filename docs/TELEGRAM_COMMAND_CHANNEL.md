@@ -115,3 +115,34 @@ The next build layer is a capped responder:
 
 Recommended first cap: 10 model-written Telegram replies per night, with no premium-model fallback and no agent/routine unpause.
 
+## Capped Local Responder - 2026-05-14
+
+The live Mac Mini runtime now has a capped local Ollama responder in the installed Telegram plugin runtime patch.
+
+Current route:
+
+- Ollama URL: `http://100.93.83.23:11434`
+- Model: `qwen3:8b`
+- Trigger: plain private Telegram messages classified as `Question for CoS`
+- Daily cap: 10 replies by default
+- Fallback: deterministic no-model response if Ollama fails, times out, or returns an empty answer
+- Audit trail: responder replies are written back to the linked Paperclip issue as comments
+
+Safety controls:
+
+- No CEO/CTO/Coder agents are unpaused.
+- No routines are unpaused.
+- No Claude, Codex, or premium model fallback is used.
+- The responder prompt forbids claiming agents are working or promising external actions.
+- The response includes usage accounting: `Local Ollama responder X/Y today`.
+- The runtime aborts the Ollama request after 20 seconds and falls back to deterministic text.
+
+This is still a live runtime patch, not durable plugin source. The durable implementation should move this into the Telegram plugin source with tests for:
+
+- direct question classification
+- daily cap accounting
+- Ollama timeout/fallback behavior
+- Paperclip comment audit writes
+- Telegram reply formatting
+- no agent/routine wake side effects
+
