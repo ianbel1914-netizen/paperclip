@@ -146,3 +146,16 @@ This is still a live runtime patch, not durable plugin source. The durable imple
 - Telegram reply formatting
 - no agent/routine wake side effects
 
+## Question Reply UX Update - 2026-05-14
+
+For plain Telegram messages classified as `Question for CoS`, the live runtime suppresses the verbose task-created receipt.
+
+Expected behavior:
+
+- Paperclip still creates the CoS Inbox issue.
+- Telegram sends only the responder answer back to Ian.
+- The responder answer becomes the Telegram thread anchor.
+- Replies to the responder answer continue back into the same Paperclip issue as comments.
+
+This keeps the mobile experience conversational while preserving the Paperclip audit trail.
+
