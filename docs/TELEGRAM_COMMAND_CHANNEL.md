@@ -275,3 +275,18 @@ codex are you responding to this message?
 
 This should route through the Codex-frontline CoS conversation path, not create a `Codex Wake:` issue.
 
+## Quiet Default CoS Conversation - 2026-05-15
+
+Updated behavior: the Telegram CoS chat should not expose internal intake labels such as `Brain dump`, `Question for CoS`, or `CoS Inbox` during normal conversation.
+
+Current behavior:
+
+- Natural-language private messages default to the Codex CoS conversation path.
+- Paperclip still records and routes the message in the background.
+- Internal labels may still be used for storage/routing, but should not be shown to Ian as the primary chat response.
+- `pc ...` remains the visible deterministic command surface.
+- `cx ...` / `codex wake ...` remain explicit manual wake shortcuts.
+- Very short acknowledgements may be ignored rather than creating visible Paperclip receipts.
+
+Goal: Telegram should feel like a conversation with Codex/CoS. Paperclip should do categorization, issue creation, routing, usage tracking, and audit logging quietly behind the scenes.
+
