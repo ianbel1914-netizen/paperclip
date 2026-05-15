@@ -15,7 +15,7 @@ The important progress so far is not "more agents running." It is safer infrastr
 - Routine dispatch is guarded so paused or unavailable agents do not get woken accidentally.
 - Model routing now refuses some unsafe fallback cases instead of silently using a more expensive route.
 - Stale queued runs and stale run ids are handled more safely.
-- Codex has been added as a dormant Paperclip worker route.
+- Codex has been added as a controlled Paperclip worker route for the Telegram CoS layer, but live wake-on-demand is temporarily disabled until the callback path is safe.
 - GitHub now stores the code and docs branch for portability.
 
 The next move is to complete a tiny Codex smoke test, then use Paperclip to manage one business pilot: the EJV Labs Revenue Engine.
@@ -73,7 +73,7 @@ flowchart TD
     CTO -. "technical execution and review" .-> Issues
     Coder1 -. "implementation" .-> Issues
     Coder2 -. "implementation" .-> Issues
-    CodexEngineer -. "Codex local coding route, currently dormant" .-> Issues
+    CodexEngineer -. "Codex local route, callback fix pending" .-> Issues
 ```
 
 Current status:
@@ -84,9 +84,9 @@ Current status:
 | CTO | `claude_local` | Paused/manual |
 | Coder | `claude_local` | Idle |
 | Coder 2 | `claude_local` | Paused/manual |
-| Codex Engineer | `codex_local` | Idle, heartbeat disabled, wake-on-demand disabled |
+| Codex Engineer | `codex_local` | Idle, scheduled heartbeats disabled, wake-on-demand disabled pending callback fix |
 
-The Codex Engineer exists so Paperclip can eventually use Codex as a coding worker, but it has not been unleashed. Its first assigned issue is a read-only smoke task in backlog.
+The Codex Engineer is the intended default smart CoS route for normal Telegram conversation. A live wake test proved Telegram can trigger it, but the `codex_local` runtime could not reach the Paperclip API callback URL from its sandbox and began wasteful continuation attempts. The safe current state is: scheduled heartbeats off, wake-on-demand off, Telegram still records conversation context quietly. CEO/CTO/Coder agent routines remain paused until the Codex communication layer is reliable.
 
 ## Issue Lifecycle
 

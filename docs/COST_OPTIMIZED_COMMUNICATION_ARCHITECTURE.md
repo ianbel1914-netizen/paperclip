@@ -18,9 +18,9 @@ The system should not require Ian to pre-sort thoughts or remember strict syntax
 
 ## Core Principle
 
-Use the cheapest layer that can safely do the job.
+Use the cheapest layer that can safely do the job, except the human-facing CoS conversation layer should be smart enough to keep pace with Ian.
 
-Conversation should feel continuous, but expensive reasoning should be opt-in, capped, and auditable.
+Conversation should feel continuous. Expensive downstream work should be opt-in, capped, and auditable.
 
 ## Architecture
 
@@ -28,10 +28,10 @@ Conversation should feel continuous, but expensive reasoning should be opt-in, c
 flowchart TD
   A["Ian in Telegram"] --> B["IBCOS_bot"]
   B --> C["Telegram Intake Router"]
-  C --> D["Paperclip CoS Inbox"]
-  D --> E["Deterministic Rules"]
-  D --> F["Cheap Triage Model or Local Model"]
-  D --> G["Codex / Premium Agent Escalation"]
+  C --> D["Paperclip Conversation Record"]
+  D --> E["Deterministic Commands"]
+  D --> F["Codex CoS Frontline"]
+  D --> G["Specialist Agent Escalation"]
   E --> H["Telegram Reply"]
   F --> H
   G --> H
@@ -43,10 +43,10 @@ flowchart TD
 
 | Tier | Use | Worker | Cost | Example |
 | --- | --- | --- | --- | --- |
-| 0. Routing | Capture, classify, link, confirm | deterministic code | near-zero | create CoS Inbox item |
+| 0. Commands | Status, issue lists, deterministic actions | deterministic code | near-zero | `pc status` |
 | 1. Status | Known answers from Paperclip state | deterministic/API | near-zero | `status`, `issues`, `agents` |
-| 2. Lightweight response | Simple question, summary, next step | local/small model | low | "what did I send today?" |
-| 3. Codex review | Codebase, docs, planning, async judgment | Codex | moderate/capped | roadmap update |
+| 2. CoS conversation | Natural language conversation with Ian | Codex on demand | moderate/capped | "help me think through this" |
+| 3. Local model support | Cheap tagging, summaries, enrichment | Ollama/local model | low | categorize notes overnight |
 | 4. Premium agent | nuanced strategy or high-stakes judgment | Sonnet-class | higher/capped | product/company decision |
 
 ## Default Message Handling
@@ -56,9 +56,10 @@ Telegram private messages from Ian are handled as follows:
 1. Slash command: execute command.
 2. `pc` command: execute shorthand command.
 3. Reply to Paperclip message: add comment to the mapped issue.
-4. Plain message: create a CoS Inbox issue with intent label.
+4. `cx` or `codex wake`: create an explicit Codex Wake issue.
+5. Plain natural-language message: create a Paperclip conversation record, wake the Codex Engineer on demand, and reply in Telegram without exposing routing labels.
 
-Current first-pass intent labels:
+Intent labels can still be stored in Paperclip for retrieval and prioritization, but they should not be shown in normal Telegram chat:
 
 - `Question for CoS`
 - `Task candidate`
@@ -71,10 +72,10 @@ Current first-pass intent labels:
 The desired loop is asynchronous but feels alive:
 
 1. Ian sends a thought or question.
-2. Paperclip creates or updates a CoS Inbox thread.
-3. Telegram confirms and asks Ian to reply to continue the thread.
-4. A responder posts a reply/comment.
-5. Telegram sends the reply back to Ian.
+2. Paperclip creates or updates the conversation record in the background.
+3. Codex wakes on demand when the message is substantive.
+4. Telegram replies naturally, without "captured", "brain dump", or "routed" receipts.
+5. Paperclip comments remain the durable record and can bridge back to Telegram.
 
 Important boundary: Telegram is the mobile surface. Paperclip remains the record.
 
@@ -84,9 +85,10 @@ Hard rules for the first live version:
 
 - Always-on Telegram listener is allowed.
 - Deterministic routing is allowed.
-- Lightweight responder may answer direct questions only.
-- Max one responder run at a time.
-- Max 10 model-generated Telegram replies overnight until approved otherwise.
+- Codex Engineer wake-on-demand is the target state for Ian's normal CoS conversation, but remains disabled until the `codex_local` API callback path is fixed.
+- Codex scheduled heartbeats/routines remain disabled.
+- Max one Codex CoS run at a time.
+- Track Codex CoS routed messages, invoked runs, and estimated prompt tokens.
 - No delegation from the responder.
 - No broad repo scans from the responder.
 - No premium model fallback without explicit approval.
@@ -137,7 +139,7 @@ Escalate to Codex or a premium agent when:
 Escalation result should be visible in Telegram:
 
 ```text
-I captured this and marked it for Codex review tomorrow. No agent spend triggered overnight.
+I am here. I am picking this up now.
 ```
 
 ## Tomorrow Build Plan
@@ -148,7 +150,20 @@ I captured this and marked it for Codex review tomorrow. No agent spend triggere
 4. Add deterministic `inbox`, `questions`, and `today` Telegram commands.
 5. Add a capped lightweight responder for direct questions.
 6. Add usage counters visible in Paperclip.
-7. Only then consider waking the CEO/CoS agent on selected threads.
+7. Keep CEO/CTO/Coder agents paused until Codex CoS routing is reliable.
+
+## Live Runtime Notes
+
+As of 2026-05-15:
+
+- The installed Telegram plugin has a singleton worker lock at `/tmp/paperclip-telegram-worker.lock` so duplicate Paperclip processes cannot both answer Telegram.
+- Normal private Telegram messages default to the Codex CoS lane. Ian does not need to type `cx`.
+- Visible replies should be natural acknowledgements, not internal routing receipts.
+- `pc ...` remains the deterministic command namespace.
+- `cx ...` and `codex wake ...` remain explicit manual wake shortcuts.
+- A live test proved the Telegram route can wake Codex, but also exposed a cost risk: the `codex_local` runtime could not reach the Paperclip API callback URL from its sandbox and started continuation runs trying to post back.
+- Current safe state: Codex Engineer is `idle` with `heartbeat.enabled=false` and `heartbeat.wakeOnDemand=false`.
+- Next required build step: fix the `codex_local` runtime API callback path before re-enabling Telegram-to-Codex live answers.
 
 ## Success Criteria
 
