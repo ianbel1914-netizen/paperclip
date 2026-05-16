@@ -7,12 +7,17 @@ import { createRequire } from "node:module";
 const requireFromDbPackage = createRequire(new URL("../packages/db/package.json", import.meta.url));
 const { default: postgres } = await import(requireFromDbPackage.resolve("postgres"));
 
+const HOME_DIR = process.env.HOME ?? "/Users/openclaw";
 const COMPANY_ID = process.env.PAPERCLIP_COMPANY_ID ?? "a1a88815-804e-4282-ad9c-77107d763374";
 const CODEX_AGENT_ID = process.env.CODEX_ENGINEER_AGENT_ID ?? "4e6af8a9-cc2a-4003-bdad-48cd64fd8feb";
 const DB_URL = process.env.PAPERCLIP_DATABASE_URL ?? "postgres://paperclip:paperclip@localhost:54329/paperclip";
 const PUBLIC_URL = process.env.PAPERCLIP_PUBLIC_URL ?? "https://ians-mac-mini-1.tail403c1a.ts.net";
-const MASTER_KEY_FILE = process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE ?? "/Users/openclaw/.paperclip/instances/default/secrets/master.key";
-const LOG_PATH = process.env.TELEGRAM_COS_SMOKE_LOG ?? "/Users/openclaw/.paperclip/instances/default/logs/telegram-cos-smoke.jsonl";
+const MASTER_KEY_FILE =
+  process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE ??
+  `${HOME_DIR}/.paperclip/instances/default/secrets/master.key`;
+const LOG_PATH =
+  process.env.TELEGRAM_COS_SMOKE_LOG ??
+  `${HOME_DIR}/.paperclip/instances/default/logs/telegram-cos-smoke.jsonl`;
 const PLUGIN_KEY = "paperclip-plugin-telegram";
 const TELEGRAM_API = "https://api.telegram.org";
 
@@ -28,6 +33,15 @@ for (let i = 2; i < process.argv.length; i += 1) {
       i += 1;
     }
   }
+}
+
+if (args.has("help") || args.has("h")) {
+  console.log(`Usage:
+  node scripts/telegram-cos-loop-smoke.mjs [--loop] [--iterations N] [--interval-sec N] [--wait-sec N] [--label TEXT]
+
+This script executes a CoS smoke preflight roundtrip against the Telegram bridge.
+`);
+  process.exit(0);
 }
 
 const loop = args.get("loop") === "true";
@@ -131,7 +145,7 @@ async function runOnce(sql, cfg, ordinal) {
       created_by_user_id, issue_number, identifier, origin_kind, origin_id, origin_fingerprint,
       created_at, updated_at
     ) values (
-      ${COMPANY_ID}, ${title}, ${description}, 'in_progress', 'low', ${CODEX_AGENT_ID},
+      ${COMPANY_ID}, ${title}, ${description}, 'todo', 'low', null,
       'telegram-cos-smoke', ${issueNumber}, ${identifier}, 'telegram:cos-smoke',
       ${`telegram-cos-smoke-${Date.now()}-${ordinal}`}, ${`telegram-cos-smoke-${label}`}, now(), now()
     ) returning id, identifier, title
