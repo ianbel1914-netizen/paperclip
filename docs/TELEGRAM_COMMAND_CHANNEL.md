@@ -290,3 +290,25 @@ Current behavior:
 
 Goal: Telegram should feel like a conversation with Codex/CoS. Paperclip should do categorization, issue creation, routing, usage tracking, and audit logging quietly behind the scenes.
 
+## Codex CoS Wake-Gate Repair - 2026-05-15
+
+Observed issue: Telegram showed only `I am here. I've got it.` for substantive CoS messages.
+
+Root cause: the Telegram plugin created `CoS Conversation: ...` issues and attempted to invoke the Codex Engineer, but Paperclip rejected the invoke with `Agent wakeup was skipped by heartbeat policy` because the Codex Engineer had `heartbeat.wakeOnDemand=false`.
+
+Live repair:
+
+- Kept scheduled Codex heartbeats disabled: `heartbeat.enabled=false`.
+- Opened the on-demand Codex gate: `heartbeat.wakeOnDemand=true`.
+- Kept concurrency capped: `heartbeat.maxConcurrentRuns=1`.
+- Cancelled the stale stuck CoS backlog from before the repair so old Telegram messages would not burn Codex cycles.
+- Updated the live installed Telegram runtime fallback so a blocked invoke no longer pretends the conversation is active.
+
+Expected behavior after repair:
+
+- A fresh substantive Telegram message should create a `CoS Conversation: ...` issue.
+- Paperclip should accept a Codex Engineer on-demand invoke.
+- Telegram should first acknowledge that Codex is picking it up, then later bridge Codex's Paperclip comment back into the Telegram thread.
+
+Cost boundary: this enables on-demand Codex conversation from Telegram, not scheduled Codex routines or CEO/CTO/Coder agents.
+
