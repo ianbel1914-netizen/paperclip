@@ -312,3 +312,39 @@ Expected behavior after repair:
 
 Cost boundary: this enables on-demand Codex conversation from Telegram, not scheduled Codex routines or CEO/CTO/Coder agents.
 
+## Telegram CoS Noise Suppression and Smoke Loop - 2026-05-15
+
+Observed issue: after the Codex wake gate repair, Telegram could receive too many system-style messages around one CoS request, including agent run started/finished and issue done notifications. That made the chat feel broken even when the underlying Codex run succeeded.
+
+Live runtime repair:
+
+- Suppressed generic agent run started/finished Telegram notifications.
+- Suppressed issue system notifications for `CoS Conversation:` issues.
+- Kept the actual conversation reply path active through the issue-comment bridge.
+- Preserved agent error notifications.
+
+Smoke test harness:
+
+```bash
+cd /Users/openclaw/Documents/paperclip
+node scripts/telegram-cos-loop-smoke.mjs --label manual --wait-sec 90
+```
+
+Overnight loop example:
+
+```bash
+nohup /opt/homebrew/opt/node@22/bin/node scripts/telegram-cos-loop-smoke.mjs   --loop --iterations 7 --interval-sec 3600 --wait-sec 90 --label overnight   >> /Users/openclaw/.paperclip/instances/default/logs/telegram-cos-smoke-runner.log 2>&1 &
+```
+
+What it tests:
+
+- decrypts the configured Telegram bot token from Paperclip secrets locally
+- sends a real Telegram seed message to Ian's configured chat
+- creates a synthetic `CoS Conversation:` issue
+- maps the Telegram seed as that issue's thread anchor
+- inserts a synthetic agent comment
+- waits for the live plugin bridge to forward that comment back to Telegram
+- records pass/fail JSONL at `/Users/openclaw/.paperclip/instances/default/logs/telegram-cos-smoke.jsonl`
+
+Boundary: this tests the Paperclip-to-Telegram bridge without waking Codex or spending model tokens. It cannot impersonate Ian as an inbound Telegram user; fresh user-message tests still require Ian to send a real message.
+
